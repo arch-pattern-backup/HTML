@@ -1,755 +1,221 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Project: Starfield 1943</title>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;700&display=swap" rel="stylesheet">
-    <style>
-        :root { --glow: #00f2ff; --gold: #ffc94a; --bg: #020205; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Starfield 1943 — For Dad</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;700&display=swap" rel="stylesheet">
+<style>
+:root{--glow:#00f2ff;--gold:#ffc94a;--bg:#020205;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:#fff;font-family:'JetBrains Mono',monospace;
+  min-height:100dvh;display:flex;flex-direction:column;align-items:center;
+  justify-content:flex-start;overflow-x:hidden;padding-bottom:40px;}
+canvas{position:fixed;top:0;left:0;z-index:-1;}
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+/* ── Title area ── */
+.hero{text-align:center;padding:40px 20px 28px;width:100%;}
+.hero-sub{font-size:.65rem;letter-spacing:5px;color:rgba(0,242,255,.55);margin-bottom:16px;}
+.hero-title{font-size:clamp(2rem,6vw,3.5rem);font-weight:700;color:#ffffff;
+  text-shadow:0 0 30px var(--glow);line-height:1.2;}
+.hero-gold{color:var(--gold);text-shadow:0 0 20px rgba(255,180,0,.7);}
+.hero-desc{font-size:.72rem;letter-spacing:2px;color:rgba(255,255,255,.5);
+  margin-top:12px;max-width:500px;margin-left:auto;margin-right:auto;line-height:1.8;}
 
-        body {
-            background-color: var(--bg);
-            color: var(--glow);
-            font-family: 'JetBrains Mono', monospace;
-            display: flex; flex-direction: column; align-items: center;
-            overflow-x: hidden; overflow-y: auto;
-            min-height: 100dvh;
-        }
+/* ── Device hint banner ── */
+#device-hint{
+  width:88%;max-width:600px;margin:0 auto 28px;
+  background:rgba(0,242,255,.07);border:1px solid rgba(0,242,255,.3);
+  padding:14px 18px;font-size:.7rem;letter-spacing:2px;color:#b0f0ff;
+  text-align:center;line-height:1.8;
+}
+#device-hint strong{color:#00e8ff;}
 
-        canvas { position: fixed; top: 0; left: 0; z-index: -1; }
+/* ── Version cards ── */
+.cards{display:flex;flex-direction:column;gap:16px;width:88%;max-width:600px;margin:0 auto;}
+.card{background:rgba(0,0,0,.8);padding:24px 28px;cursor:pointer;
+  text-decoration:none;display:block;transition:transform .15s,background .15s;
+  position:relative;overflow:hidden;}
+.card:hover{background:rgba(0,0,0,.92);transform:translateY(-2px);}
+.card::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .2s;
+  background:linear-gradient(135deg,rgba(0,242,255,.05),transparent);}
+.card:hover::before{opacity:1;}
+.card-dad   {border:2px solid rgba(255,180,0,.6);}
+.card-mobile{border:2px solid rgba(0,242,255,.4);}
+.card-desk  {border:2px solid rgba(162,155,254,.4);}
+.card-icon{font-size:2rem;margin-bottom:10px;display:block;}
+.card-label{font-size:.6rem;letter-spacing:4px;margin-bottom:6px;}
+.card-dad    .card-label{color:var(--gold);}
+.card-mobile .card-label{color:#00e8ff;}
+.card-desk   .card-label{color:#a29bfe;}
+.card-title{font-size:1.3rem;font-weight:700;color:#ffffff;margin-bottom:8px;}
+.card-desc{font-size:.72rem;letter-spacing:1px;color:rgba(255,255,255,.55);line-height:1.7;}
+.card-badge{position:absolute;top:14px;right:14px;font-size:.55rem;
+  letter-spacing:2px;padding:3px 8px;border:1px solid;}
+.card-dad .card-badge{color:var(--gold);border-color:rgba(255,180,0,.4);}
+.recommended-tag{font-size:.55rem;letter-spacing:3px;color:var(--gold);
+  text-shadow:0 0 8px rgba(255,180,0,.5);}
 
-        /* ── MISSION CONTROL HEADER ──────────────────────────────── */
-        header {
-            width: 100%;
-            background: rgba(0,0,0,.92);
-            border-bottom: 1px solid rgba(0,242,255,.3);
-            position: sticky; top: 0; z-index: 50;
-            padding: 0;
-        }
-        .hud-top {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 8px 24px;
-            border-bottom: 1px solid rgba(0,242,255,.1);
-            flex-wrap: wrap; gap: 8px;
-        }
-        /* HUD status pills */
-        .hud-pills { display:flex; gap:16px; flex-wrap:wrap; }
-        .pill {
-            display: flex; flex-direction: column; gap:2px;
-            padding: 4px 12px;
-            border: 1px solid rgba(0,242,255,.2);
-            background: rgba(0,242,255,.05);
-        }
-        .pill-label {
-            font-size: .5rem; letter-spacing: 3px;
-            color: rgba(0,242,255,.6); text-transform: uppercase;
-        }
-        .pill-value {
-            font-size: .78rem; letter-spacing: 2px;
-            color: #ffffff;
-        }
-        .pill-value.gold { color: var(--gold); text-shadow: 0 0 8px rgba(255,180,0,.5); }
-        .pill-value.cyan { color: #00e8ff; text-shadow: 0 0 8px rgba(0,242,255,.5); }
+/* ── TV guide section ── */
+.tv-section{width:88%;max-width:600px;margin:28px auto 0;
+  background:rgba(0,0,0,.75);border:1px solid rgba(255,255,255,.12);}
+.tv-header{padding:14px 20px;font-size:.6rem;letter-spacing:4px;color:rgba(255,255,255,.5);
+  border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px;}
+.tv-header span{font-size:1.1rem;}
+.tv-steps{padding:16px 20px;display:flex;flex-direction:column;gap:0;}
+.tv-step{display:flex;gap:14px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06);}
+.tv-step:last-child{border:none;}
+.step-num{color:var(--gold);font-size:.8rem;font-weight:700;min-width:20px;margin-top:2px;}
+.step-body{font-size:.72rem;letter-spacing:1px;color:rgba(255,255,255,.65);line-height:1.7;}
+.step-body strong{color:#ffffff;}
+.step-body .tag{font-size:.6rem;letter-spacing:2px;padding:2px 7px;
+  border:1px solid rgba(0,242,255,.3);color:#00e8ff;margin-left:6px;vertical-align:middle;}
 
-        /* Controls row */
-        .hud-controls {
-            display: flex; gap: 10px; align-items: center;
-            padding: 8px 24px; flex-wrap: wrap;
-        }
-        .ctrl-btn {
-            background: rgba(0,242,255,.07);
-            border: 1px solid rgba(0,242,255,.3);
-            color: #d0f4ff;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: .62rem; letter-spacing: 2px;
-            padding: 6px 14px; cursor: pointer;
-            transition: background .15s, border-color .15s, color .15s;
-        }
-        .ctrl-btn:hover  { background:rgba(0,242,255,.18); border-color:#00e8ff; color:#fff; }
-        .ctrl-btn.active { background:rgba(0,242,255,.22); border-color:#00e8ff; color:#fff; }
-        .ctrl-btn.gold-btn {
-            border-color: rgba(255,180,0,.4); color: var(--gold);
-            background: rgba(255,180,0,.06);
-        }
-        .ctrl-btn.gold-btn:hover { background:rgba(255,180,0,.15); border-color:var(--gold); }
-
-        .speed-wrap { display:flex; align-items:center; gap:8px; font-size:.62rem; letter-spacing:2px; color:#c0ecff; }
-        input[type=range] {
-            -webkit-appearance:none; width:80px; height:3px;
-            background:rgba(0,242,255,.25); border-radius:2px; cursor:pointer;
-        }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance:none; width:11px; height:11px;
-            border-radius:50%; background:#00e8ff; box-shadow:0 0 6px #00e8ff;
-        }
-
-        /* ── ODOMETER ────────────────────────────────────────────── */
-        .odometer {
-            font-size: 5rem; font-weight: 700; margin: 24px 0 6px;
-            color: #ffffff; text-shadow: 0 0 28px var(--glow), 0 0 2px #fff;
-        }
-        .days-since {
-            font-size: .88rem; letter-spacing: 3px;
-            color: #ffffff;
-            text-shadow: 0 0 10px rgba(0,242,255,.4);
-            background: rgba(0,0,0,.65);
-            padding: 5px 18px; margin-bottom: 24px;
-            border: 1px solid rgba(0,242,255,.15);
-        }
-
-        /* ── WORLD CLOCKS ────────────────────────────────────────── */
-        .clock-container {
-            display: grid; grid-template-columns: repeat(3,1fr);
-            gap: 20px; width: 90%; margin-top: 4px;
-        }
-        .city-box {
-            background: rgba(0,0,0,.8);
-            border: 1px solid rgba(0,242,255,.25);
-            padding: 15px; text-align: center;
-        }
-        .city-name { font-size:.75rem; letter-spacing:4px; color:#00e8ff; text-shadow:0 0 8px rgba(0,242,255,.6); margin-bottom:10px; }
-        .city-date { font-size:1.05rem; color:#ffffff; margin-bottom:5px; }
-        .city-time { font-size:1.8rem; font-weight:700; color:#ffffff; }
-
-        /* ── HAPPY BIRTHDAY SPLASH ───────────────────────────────── */
-        #bday-splash {
-            display: none;
-            position: fixed; inset: 0; z-index: 200;
-            background: rgba(0,0,0,.88);
-            flex-direction: column; align-items: center; justify-content: center;
-            text-align: center; padding: 40px;
-        }
-        #bday-splash.show { display: flex; }
-        .bday-msg {
-            font-size: clamp(2rem, 6vw, 4.5rem);
-            font-weight: 700; color: var(--gold);
-            text-shadow: 0 0 40px rgba(255,180,0,.9), 0 0 80px rgba(255,180,0,.4);
-            letter-spacing: 6px; line-height: 1.3;
-            animation: bdayPulse 2s ease-in-out infinite alternate;
-        }
-        @keyframes bdayPulse {
-            from { text-shadow: 0 0 30px rgba(255,180,0,.7); }
-            to   { text-shadow: 0 0 60px rgba(255,255,100,.95), 0 0 100px rgba(255,180,0,.5); }
-        }
-        .bday-sub {
-            margin-top: 20px; font-size: .9rem; letter-spacing: 4px;
-            color: #ffffff; opacity: .8;
-        }
-        .bday-years {
-            margin-top: 12px; font-size: 1.4rem; letter-spacing: 3px;
-            color: #00e8ff;
-        }
-        #bday-close {
-            margin-top: 36px;
-            background: none; border: 1px solid rgba(255,180,0,.5);
-            color: var(--gold); font-family: 'JetBrains Mono', monospace;
-            font-size: .75rem; letter-spacing: 3px;
-            padding: 10px 28px; cursor: pointer;
-            transition: background .2s;
-        }
-        #bday-close:hover { background: rgba(255,180,0,.12); }
-
-        /* Confetti canvas */
-        #confetti-canvas {
-            position: fixed; inset: 0; z-index: 199; pointer-events: none;
-        }
-
-        /* ── EVENT PANEL ─────────────────────────────────────────── */
-        #event-panel {
-            width: 90%; margin-top: 24px;
-            background: rgba(0,0,0,.8);
-            border: 1px solid rgba(255,180,0,.35);
-        }
-        .panel-header {
-            padding: 10px 16px; font-size:.62rem; letter-spacing:4px;
-            border-bottom: 1px solid rgba(255,180,0,.2);
-            display:flex; justify-content:space-between; align-items:center;
-            color: var(--gold);
-        }
-        #event-list { list-style:none; max-height:220px; overflow-y:auto; }
-        #event-list li {
-            display:flex; gap:14px; align-items:flex-start;
-            padding:10px 16px;
-            border-bottom:1px solid rgba(255,180,0,.1);
-            animation: entryFade .5s ease forwards;
-        }
-        @keyframes entryFade { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
-        #event-list li:last-child { border-bottom:none; }
-        .ev-date { color:#00e8ff; font-size:.68rem; white-space:nowrap; min-width:110px; padding-top:2px; }
-        .ev-text  { color:#fff3d4; font-size:.8rem; line-height:1.5; }
-        .ev-personal { color:#ffe18a; }
-
-        /* ── ADD MILESTONE FORM ──────────────────────────────────── */
-        #milestone-panel {
-            display: none;
-            width: 90%; margin-top: 16px;
-            background: rgba(0,0,0,.85);
-            border: 1px solid rgba(255,180,0,.4);
-        }
-        #milestone-panel.open { display: block; }
-        .milestone-header {
-            padding: 10px 16px; font-size:.62rem; letter-spacing:4px;
-            color: var(--gold);
-            border-bottom: 1px solid rgba(255,180,0,.2);
-        }
-        .milestone-form {
-            padding: 16px; display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end;
-        }
-        .mf-group { display:flex; flex-direction:column; gap:5px; }
-        .mf-group label {
-            font-size:.55rem; letter-spacing:3px; color:rgba(0,242,255,.7);
-        }
-        .mf-group input {
-            background: rgba(0,242,255,.06);
-            border: 1px solid rgba(0,242,255,.25);
-            color: #ffffff; font-family:'JetBrains Mono',monospace;
-            font-size:.8rem; padding:6px 10px;
-            outline: none; transition: border-color .2s;
-            width: 180px;
-        }
-        .mf-group input[type=text] { width: 280px; }
-        .mf-group input:focus { border-color: #00e8ff; }
-        .mf-group input::placeholder { color:rgba(255,255,255,.25); }
-        .mf-add {
-            background: rgba(255,180,0,.1);
-            border: 1px solid rgba(255,180,0,.5);
-            color: var(--gold); font-family:'JetBrains Mono',monospace;
-            font-size:.65rem; letter-spacing:3px;
-            padding: 7px 20px; cursor:pointer;
-            transition: background .2s;
-            align-self: flex-end;
-        }
-        .mf-add:hover { background:rgba(255,180,0,.22); }
-        #ms-error {
-            font-size:.65rem; color:#ff7070; letter-spacing:2px;
-            padding: 0 16px 12px; display:none;
-        }
-
-        /* Saved milestones list inside panel */
-        #ms-saved { list-style:none; border-top:1px solid rgba(255,180,0,.15); }
-        #ms-saved li {
-            display:flex; justify-content:space-between; align-items:center;
-            padding:7px 16px; font-size:.72rem;
-            border-bottom:1px solid rgba(255,180,0,.08);
-            color:#fff3d4;
-        }
-        #ms-saved li:last-child { border:none; }
-        .ms-del {
-            background:none; border:none; color:rgba(255,100,100,.5);
-            cursor:pointer; font-family:inherit; font-size:.8rem;
-            transition:color .15s;
-        }
-        .ms-del:hover { color:#ff6060; }
-
-        /* ── PAUSE BADGE ─────────────────────────────────────────── */
-        #paused-badge {
-            display:none; position:fixed; top:50%; left:50%;
-            transform:translate(-50%,-50%);
-            font-size:.9rem; letter-spacing:8px; color:#ffffff;
-            background:rgba(0,0,0,.7); padding:12px 28px;
-            border:1px solid rgba(0,242,255,.3);
-            pointer-events:none; z-index:60;
-        }
-
-        /* ── SAFE PULSE — slow CSS transition, no flicker ─────────── */
-        #pulse-overlay {
-            position:fixed; inset:0; pointer-events:none; z-index:98;
-            opacity:0;
-            background:radial-gradient(ellipse at center,rgba(255,165,0,.15) 0%,transparent 68%);
-            transition:opacity 1.4s ease-out;
-        }
-        #pulse-overlay.pulse-active { opacity:1; }
-
-        /* ── FOOTER STATS BAR ────────────────────────────────────── */
-        .stats-bar {
-            width: 100%; margin-top: 28px; margin-bottom: 0;
-            background: rgba(0,0,0,.88);
-            border-top: 1px solid rgba(0,242,255,.2);
-            padding: 10px 24px;
-            display: flex; gap: 32px; flex-wrap: wrap;
-        }
-        .stat-item { display:flex; flex-direction:column; gap:2px; }
-        .stat-label { font-size:.48rem; letter-spacing:3px; color:rgba(0,242,255,.55); }
-        .stat-value { font-size:.72rem; letter-spacing:2px; color:#d0f4ff; }
-    </style>
+/* ── Footer ── */
+.footer{margin-top:32px;font-size:.55rem;letter-spacing:3px;
+  color:rgba(255,255,255,.2);text-align:center;}
+</style>
 </head>
 <body>
+<canvas id="starfield-mini"></canvas>
 
-<canvas id="starfield"></canvas>
-<canvas id="confetti-canvas"></canvas>
-<div id="pulse-overlay"></div>
-<div id="paused-badge">&#9646;&#9646; PAUSED</div>
-
-<!-- ── BIRTHDAY SPLASH ──────────────────────────────────────────────── -->
-<div id="bday-splash" role="dialog" aria-label="Happy Birthday">
-    <div class="bday-msg">&#127881; HAPPY BIRTHDAY<br>DAD &#127881;</div>
-    <div class="bday-sub">TEMPORAL COORDINATES LOCKED &mdash; 16 MAY 2026</div>
-    <div class="bday-years" id="bday-years-line"></div>
-    <button id="bday-close" onclick="closeBday()">CONTINUE JOURNEY &#10132;</button>
+<div class="hero">
+  <div class="hero-sub">A GIFT FROM YOUR FAMILY</div>
+  <div class="hero-title">STARFIELD<br><span class="hero-gold">1943</span></div>
+  <div class="hero-desc">
+    A living star map of your life &mdash; from 8 November 1943 to today.<br>
+    Every day you have lived, a star is born.
+  </div>
 </div>
 
-<!-- ── HEADER ───────────────────────────────────────────────────────── -->
-<header>
-    <div class="hud-top">
-        <div class="hud-pills">
-            <div class="pill">
-                <span class="pill-label">STATUS</span>
-                <span class="pill-value cyan" id="status-text">ACTIVE</span>
-            </div>
-            <div class="pill">
-                <span class="pill-label">STARS ACCUMULATED</span>
-                <span class="pill-value gold" id="star-count">0</span>
-            </div>
-            <div class="pill">
-                <span class="pill-label">VELOCITY</span>
-                <span class="pill-value" id="vel-pill">5 DAYS / FRAME</span>
-            </div>
-            <div class="pill">
-                <span class="pill-label">COORDINATES</span>
-                <span class="pill-value">52.4862&deg; N &nbsp; 1.8904&deg; W</span>
-            </div>
-        </div>
-    </div>
-    <div class="hud-controls">
-        <div class="speed-wrap">
-            <span>SPEED</span>
-            <input type="range" id="speed-slider" min="1" max="10" value="5" aria-label="Simulation speed">
-            <span id="speed-label">5</span>
-        </div>
-        <button class="ctrl-btn" id="pause-btn">&#9646;&#9646; PAUSE</button>
-        <button class="ctrl-btn" id="safe-btn">SAFE MODE</button>
-        <button class="ctrl-btn gold-btn" id="add-btn">+ ADD MILESTONE</button>
-    </div>
-</header>
+<div id="device-hint">Detecting your device&hellip;</div>
 
-<!-- ── ODOMETER ─────────────────────────────────────────────────────── -->
-<div class="odometer" id="year-display">1943</div>
-<div class="days-since" id="days-since">&nbsp;</div>
-
-<!-- ── CLOCKS ────────────────────────────────────────────────────────── -->
-<div class="clock-container">
-    <div class="city-box">
-        <div class="city-name">SEATTLE</div>
-        <div id="seattle-date" class="city-date">-- --- ----</div>
-        <div id="seattle-time" class="city-time">--:-- --</div>
-    </div>
-    <div class="city-box">
-        <div class="city-name">BIRMINGHAM</div>
-        <div id="uk-date" class="city-date">-- --- ----</div>
-        <div id="uk-time" class="city-time">--:-- --</div>
-    </div>
-    <div class="city-box">
-        <div class="city-name">DELHI</div>
-        <div id="india-date" class="city-date">-- --- ----</div>
-        <div id="india-time" class="city-time">--:-- --</div>
-    </div>
+<div class="cards">
+  <!-- Dad Mode -->
+  <a href="starfield-1943-dad.html" class="card card-dad">
+    <span class="card-badge recommended-tag">RECOMMENDED &#9733;</span>
+    <span class="card-icon">&#128276;</span>
+    <div class="card-label">EASY READ</div>
+    <div class="card-title">Dad Mode</div>
+    <div class="card-desc">Big text, large buttons, simple layout.<br>
+      Perfect for phone, tablet, or TV screen.<br>
+      Everything you need, nothing you don&rsquo;t.</div>
+  </a>
+  <!-- Mobile -->
+  <a href="starfield-1943-mobile.html" class="card card-mobile">
+    <span class="card-icon">&#128241;</span>
+    <div class="card-label">PHONE / TABLET</div>
+    <div class="card-title">Mobile Version</div>
+    <div class="card-desc">Designed for smaller screens.<br>
+      All features, compact layout, easy to scroll.</div>
+  </a>
+  <!-- Desktop -->
+  <a href="starfield-1943.html" class="card card-desk">
+    <span class="card-icon">&#128187;</span>
+    <div class="card-label">COMPUTER</div>
+    <div class="card-title">Full Desktop Version</div>
+    <div class="card-desc">Mission control layout with side-by-side panels,<br>
+      full category filter bar, and all controls.</div>
+  </a>
 </div>
 
-<!-- ── ADD MILESTONE FORM ─────────────────────────────────────────────── -->
-<div id="milestone-panel">
-    <div class="milestone-header">&#9900; ADD YOUR OWN MILESTONE</div>
-    <div class="milestone-form">
-        <div class="mf-group">
-            <label>DATE (YYYY-MM-DD)</label>
-            <input type="date" id="ms-date" aria-label="Milestone date">
-        </div>
-        <div class="mf-group">
-            <label>DESCRIPTION</label>
-            <input type="text" id="ms-text" placeholder="e.g. Wedding day" maxlength="80" aria-label="Milestone description">
-        </div>
-        <button class="mf-add" onclick="addMilestone()">ADD &#10132;</button>
+<!-- TV guide -->
+<div class="tv-section">
+  <div class="tv-header">
+    <span>&#128250;</span> HOW TO VIEW THIS ON YOUR TV
+  </div>
+  <div class="tv-steps">
+    <div class="tv-step">
+      <div class="step-num">A</div>
+      <div class="step-body">
+        <strong>Chromecast / Google TV</strong><br>
+        Open this page in <strong>Chrome</strong> on your phone or laptop.
+        Tap the three-dot menu &#8942; and choose <strong>Cast&hellip;</strong>
+        Select your TV. The page appears on the big screen.
+        <span class="tag">EASIEST</span>
+      </div>
     </div>
-    <div id="ms-error"></div>
-    <ul id="ms-saved"></ul>
+    <div class="tv-step">
+      <div class="step-num">B</div>
+      <div class="step-body">
+        <strong>Android phone &rarr; Smart TV</strong><br>
+        Swipe down on your phone, tap <strong>Smart View</strong> (Samsung)
+        or <strong>Screen Cast</strong> (other Android). Choose your TV.
+        Your phone screen mirrors to the TV — open <strong>Dad Mode</strong>
+        for the largest text.
+      </div>
+    </div>
+    <div class="tv-step">
+      <div class="step-num">C</div>
+      <div class="step-body">
+        <strong>iPhone / iPad &rarr; Apple TV or AirPlay TV</strong><br>
+        Swipe down from top-right corner, tap <strong>Screen Mirror</strong>,
+        choose your Apple TV or AirPlay-compatible TV.
+      </div>
+    </div>
+    <div class="tv-step">
+      <div class="step-num">D</div>
+      <div class="step-body">
+        <strong>Laptop with HDMI cable</strong><br>
+        Plug an HDMI cable from your laptop to the TV.
+        Switch the TV input to the HDMI port.
+        Open this page in full-screen mode
+        (<strong>F11</strong> on Windows, <strong>Ctrl+Cmd+F</strong> on Mac).
+      </div>
+    </div>
+    <div class="tv-step">
+      <div class="step-num">&#9733;</div>
+      <div class="step-body">
+        <strong>Tip:</strong> Use <strong>Dad Mode</strong> when viewing on TV &mdash;
+        the large text and year counter read clearly from across the room.
+        Turn on <strong>Safe Mode</strong> to remove all flashing effects.
+      </div>
+    </div>
+  </div>
 </div>
 
-<!-- ── EVENT LOG ──────────────────────────────────────────────────────── -->
-<div id="event-panel">
-    <div class="panel-header">
-        <span>&#9900; SIKH CULTURAL MILESTONES &amp; PERSONAL DATES</span>
-        <span id="event-count">0 events logged</span>
-    </div>
-    <ul id="event-list" aria-live="polite"></ul>
-</div>
-
-<!-- ── STATS FOOTER BAR ───────────────────────────────────────────────── -->
-<div class="stats-bar">
-    <div class="stat-item">
-        <span class="stat-label">MISSION ELAPSED</span>
-        <span class="stat-value" id="stat-elapsed">CALCULATING</span>
-    </div>
-    <div class="stat-item">
-        <span class="stat-label">CURRENT SIM DATE</span>
-        <span class="stat-value" id="stat-simdate">&mdash;</span>
-    </div>
-    <div class="stat-item">
-        <span class="stat-label">MILESTONES AHEAD</span>
-        <span class="stat-value" id="stat-ahead">0</span>
-    </div>
-    <div class="stat-item">
-        <span class="stat-label">SYSTEM</span>
-        <span class="stat-value">TEMPORAL SYNC v2.0</span>
-    </div>
-</div>
+<div class="footer">MADE WITH LOVE &nbsp;&#9900;&nbsp; PROJECT STARFIELD 1943</div>
 
 <script>
-// ── Canvas setup ──────────────────────────────────────────────────────
-const canvas   = document.getElementById('starfield');
-const ctx      = canvas.getContext('2d');
-const confetti = document.getElementById('confetti-canvas');
-const cctx     = confetti.getContext('2d');
-
-let stars = [];
-let simDate = new Date(1943, 10, 8);
-const BORN  = new Date(1943, 10, 8);
-const endDate = new Date();
-let paused = false, safeMode = false;
-let daysPerFrame = 5;
-let starburstCount = 0;
-let eventTotal = 0;
-let pulseTimer = null;
-let bdayShown = false;
-let missionStart = Date.now();
-
-// Confetti particles
-let confettiParticles = [];
-let confettiActive = false;
-
-// User milestones (stored in memory)
-let userMilestones = [];
-
-// ── Sikh Cultural Calendar ────────────────────────────────────────────
-const sikhCalendar = [
-    { month:5,  day:16,  event:"Birthday of Rachhpal Singh Atwal", personal:true },
-    { month:4,  day:16, event:"Happy Birthday Dad! \u2605 Rachhpal Singh Atwal turns another year older \u2605", personal:true, bday:true },
-    { month:0,  day:5,  event:"Parkash Guru Gobind Singh Ji" },
-    { month:3,  day:14, event:"Parkash Guru Angad Dev Ji" },
-    { month:6,  day:23, event:"Parkash Guru Harkrishan Sahib Ji" },
-    { month:10, day:24, event:"Gurpurab Guru Nanak Dev Ji" },
-    { month:3,  day:14, event:"Vaisakhi \u2014 Birth of the Khalsa (1699)" },
-    { month:2,  day:12, event:"Shaheedi Bhai Subeg Singh & Bhai Shahbaz Singh" },
-    { month:4,  day:16, event:"Shaheedi Guru Arjan Dev Ji" },
-    { month:5,  day:25, event:"Shaheedi Baba Banda Singh Ji Bahadur" },
-    { month:6,  day:9,  event:"Shaheedi Bhai Mani Singh Ji" },
-    { month:6,  day:16, event:"Shaheedi Bhai Taru Singh Ji" },
-    { month:10, day:13, event:"Shaheedi Baba Deep Singh Ji Shaheed" },
-    { month:10, day:24, event:"Shaheedi Bhai Mati Das Ji & Bhai Sati Das Ji" },
-    { month:11, day:21, event:"Shaheedi Sahibzada Ajit Singh & Jujhar Singh \u2014 Chamkaur" },
-    { month:11, day:26, event:"Shaheedi Sahibzada Zorawar Singh, Fateh Singh & Mata Gujri Ji" },
-    { month:2,  day:14, event:"Nanakshahi New Year \u2014 1 Chet" },
-    { month:2,  day:15, event:"Hola Mohalla \u2014 Sikh Martial Arts Festival" },
-    { month:0,  day:13, event:"Mela Maghi \u2014 Battle of Muktsar Remembrance" },
-    { month:9,  day:20, event:"Diwali / Bandi Chhor Divas \u2014 Release of Guru Hargobind Ji" },
-    { month:7,  day:1,  event:"First Parkash Guru Granth Sahib Ji (1604)" },
-    { month:7,  day:30, event:"Completion of Guru Granth Sahib Ji" },
-    { month:3,  day:13, event:"Sikh Dastaar Divas \u2014 Sikh Turban Day" },
-    { month:4,  day:4,  event:"1984 Ghallughara \u2014 Attack on Sri Akal Takht Sahib" },
-    { month:6,  day:20, event:"Miri-Piri Day \u2014 Dual Swords of Guru Hargobind Ji" },
-    { month:9,  day:1,  event:"Foundation Day \u2014 Singh Sabha" },
-    { month:0,  day:13, event:"Foundation Day \u2014 Sri Harimandar Sahib" },
-    { month:0,  day:19, event:"Morcha for Keys \u2014 Sri Harimandar Sahib (1921)" },
-    { month:1,  day:21, event:"Saka Nankana Sahib (1921)" },
-    { month:2,  day:9,  event:"Birthday Sahibzada Jujhar Singh Ji" },
-    { month:10, day:28, event:"Birthday Sahibzada Zorawar Singh Ji" },
-    { month:11, day:11, event:"Birthday Sahibzada Ajit Singh Ji" },
-    { month:11, day:13, event:"Foundation Day \u2014 Shromani Akali Dal" },
-];
-
-// ── DOM refs ──────────────────────────────────────────────────────────
-const yearDisplay  = document.getElementById('year-display');
-const daysSinceEl  = document.getElementById('days-since');
-const starCountEl  = document.getElementById('star-count');
-const eventList    = document.getElementById('event-list');
-const eventCountEl = document.getElementById('event-count');
-const pulseOverlay = document.getElementById('pulse-overlay');
-const pauseBtn     = document.getElementById('pause-btn');
-const safeBtn      = document.getElementById('safe-btn');
-const addBtn       = document.getElementById('add-btn');
-const pausedBadge  = document.getElementById('paused-badge');
-const speedSlider  = document.getElementById('speed-slider');
-const speedLabel   = document.getElementById('speed-label');
-const velPill      = document.getElementById('vel-pill');
-const statusText   = document.getElementById('status-text');
-const statElapsed  = document.getElementById('stat-elapsed');
-const statSimdate  = document.getElementById('stat-simdate');
-const statAhead    = document.getElementById('stat-ahead');
-
-// ── Controls ──────────────────────────────────────────────────────────
-pauseBtn.addEventListener('click', () => {
-    paused = !paused;
-    pauseBtn.innerHTML = paused ? '&#9654; RESUME' : '&#9646;&#9646; PAUSE';
-    pauseBtn.classList.toggle('active', paused);
-    pausedBadge.style.display = paused ? 'block' : 'none';
-    statusText.textContent    = paused ? 'PAUSED' : 'ACTIVE';
-    statusText.style.color    = paused ? '#ffa040' : '#00e8ff';
+// Minimal starfield for the index page background
+const c=document.getElementById('starfield-mini');
+const x=c.getContext('2d');
+let pts=[];
+function rsz(){c.width=window.innerWidth;c.height=window.innerHeight;}
+window.addEventListener('resize',rsz);rsz();
+for(let i=0;i<180;i++) pts.push({
+    x:Math.random()*c.width, y:Math.random()*c.height,
+    r:Math.random()*1.5+.3, o:Math.random()*.8+.1,
+    tw:Math.random()*200+80, t:Math.random()*300
 });
+function draw(){
+    x.fillStyle='#020205';x.fillRect(0,0,c.width,c.height);
+    const now=Date.now();
+    pts.forEach(p=>{
+        const osc=Math.sin((now-p.t)/p.tw)*0.25;
+        x.fillStyle='rgba(255,255,255,'+(p.o+osc)+')';
+        x.beginPath();x.arc(p.x,p.y,p.r,0,Math.PI*2);x.fill();
+    });
+    requestAnimationFrame(draw);
+}
+draw();
 
-safeBtn.addEventListener('click', () => {
-    safeMode = !safeMode;
-    safeBtn.classList.toggle('active', safeMode);
-    safeBtn.textContent = safeMode ? 'SAFE MODE ON' : 'SAFE MODE';
-    if (safeMode) {
-        pulseOverlay.style.transition = 'none';
-        pulseOverlay.style.opacity = '0';
-        pulseOverlay.classList.remove('pulse-active');
+// Device hint
+(function(){
+    const hint=document.getElementById('device-hint');
+    const ua=navigator.userAgent;
+    const isMob=/Mobi|Android|iPhone|iPad/i.test(ua);
+    const isTab=/iPad|Tablet/i.test(ua)||(navigator.maxTouchPoints>1&&!/Mobi/.test(ua));
+    if(isTab){
+        hint.innerHTML='&#128241; <strong>Tablet detected</strong> &mdash; We recommend <strong>Dad Mode</strong> or the Mobile Version for your device.';
+    } else if(isMob){
+        hint.innerHTML='&#128241; <strong>Phone detected</strong> &mdash; We recommend starting with <strong>Dad Mode</strong> for the best experience.';
     } else {
-        pulseOverlay.style.transition = 'opacity 1.4s ease-out';
+        hint.innerHTML='&#128187; <strong>Computer detected</strong> &mdash; The <strong>Full Desktop Version</strong> looks great on your screen. For TV viewing, see the guide below.';
     }
-});
-
-addBtn.addEventListener('click', () => {
-    const panel = document.getElementById('milestone-panel');
-    panel.classList.toggle('open');
-    addBtn.classList.toggle('active', panel.classList.contains('open'));
-    addBtn.textContent = panel.classList.contains('open') ? '\u2212 CLOSE' : '+ ADD MILESTONE';
-});
-
-speedSlider.addEventListener('input', () => {
-    daysPerFrame = parseInt(speedSlider.value);
-    speedLabel.textContent = daysPerFrame;
-    velPill.textContent    = daysPerFrame + ' DAY' + (daysPerFrame>1?'S':'') + ' / FRAME';
-});
-
-// ── Add milestone ──────────────────────────────────────────────────────
-function addMilestone() {
-    const dateVal = document.getElementById('ms-date').value;
-    const textVal = document.getElementById('ms-text').value.trim();
-    const errEl   = document.getElementById('ms-error');
-    errEl.style.display = 'none';
-
-    if (!dateVal) { showErr('PLEASE SELECT A DATE'); return; }
-    if (!textVal)  { showErr('PLEASE ENTER A DESCRIPTION'); return; }
-
-    const parts = dateVal.split('-');
-    const ms = { month: parseInt(parts[1])-1, day: parseInt(parts[2]), year: parseInt(parts[0]), event: textVal, personal: true };
-    userMilestones.push(ms);
-    renderSavedMilestones();
-
-    document.getElementById('ms-date').value = '';
-    document.getElementById('ms-text').value = '';
-    updateAheadCount();
-}
-
-function showErr(msg) {
-    const e = document.getElementById('ms-error');
-    e.textContent = msg; e.style.display = 'block';
-}
-
-function renderSavedMilestones() {
-    const ul = document.getElementById('ms-saved');
-    ul.innerHTML = '';
-    userMilestones.forEach((ms, i) => {
-        const li = document.createElement('li');
-        const dateStr = new Date(ms.year, ms.month, ms.day)
-            .toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
-        li.innerHTML = '<span><span style="color:#00e8ff;font-size:.65rem">' + dateStr + '</span> &mdash; ' + ms.event + '</span>'
-            + '<button class="ms-del" onclick="deleteMilestone(' + i + ')" aria-label="Delete">&#10005;</button>';
-        ul.appendChild(li);
-    });
-}
-
-function deleteMilestone(i) {
-    userMilestones.splice(i,1);
-    renderSavedMilestones();
-    updateAheadCount();
-}
-
-function updateAheadCount() {
-    const now = simDate;
-    const all = [...sikhCalendar, ...userMilestones];
-    const ahead = all.filter(e => {
-        const y = e.year || now.getFullYear();
-        const d = new Date(y, e.month, e.day);
-        return d > now;
-    }).length;
-    statAhead.textContent = ahead;
-}
-
-// ── Canvas ────────────────────────────────────────────────────────────
-function resize() {
-    canvas.width = confetti.width = window.innerWidth;
-    canvas.height = confetti.height = window.innerHeight;
-}
-window.addEventListener('resize', resize);
-resize();
-
-function addStar() {
-    const warm = starburstCount > 0;
-    if (warm) starburstCount--;
-    stars.push({
-        x: Math.random()*canvas.width, y: Math.random()*canvas.height,
-        size: warm ? Math.random()*3.5+1 : Math.random()*2,
-        opacity: Math.random(), warm
-    });
-}
-
-// ── Clocks ────────────────────────────────────────────────────────────
-function updateClocks(date) {
-    const t = {hour:'2-digit',minute:'2-digit',hour12:true};
-    const d = {day:'2-digit',month:'short',year:'numeric'};
-    document.getElementById('seattle-time').innerText = date.toLocaleTimeString('en-US',{...t,timeZone:'America/Los_Angeles'});
-    document.getElementById('seattle-date').innerText = date.toLocaleDateString('en-US',{...d,timeZone:'America/Los_Angeles'});
-    document.getElementById('uk-time').innerText = date.toLocaleTimeString('en-GB',{...t,timeZone:'Europe/London'});
-    document.getElementById('uk-date').innerText = date.toLocaleDateString('en-GB',{...d,timeZone:'Europe/London'});
-    document.getElementById('india-time').innerText = date.toLocaleTimeString('en-IN',{...t,timeZone:'Asia/Kolkata'});
-    document.getElementById('india-date').innerText = date.toLocaleDateString('en-IN',{...d,timeZone:'Asia/Kolkata'});
-}
-
-function updateDaysSince(date) {
-    const ms = date - BORN;
-    if (ms < 0) { daysSinceEl.textContent=''; return; }
-    const days  = Math.floor(ms/86400000);
-    const years = (ms/(365.25*86400000)).toFixed(2);
-    daysSinceEl.textContent = days.toLocaleString() + ' DAYS  (\u00A0' + years + ' YEARS\u00A0)';
-}
-
-// ── Event checking ────────────────────────────────────────────────────
-function checkEvent(date) {
-    const m = date.getMonth(), d = date.getDate(), y = date.getFullYear();
-
-    // Sikh calendar
-    sikhCalendar.filter(e => e.month===m && e.day===d).forEach(evt => {
-        logEvent(evt, date);
-        if (evt.bday) triggerBirthday(date);
-        else if (!safeMode) { triggerPulse(); starburstCount = 12; }
-    });
-
-    // User milestones — match by month+day, or exact year if provided
-    userMilestones.filter(e => {
-        const yMatch = e.year ? e.year === y : true;
-        return e.month===m && e.day===d && yMatch;
-    }).forEach(evt => {
-        logEvent(evt, date);
-        if (!safeMode) { triggerPulse(); starburstCount = 10; }
-    });
-}
-
-function logEvent(evt, date) {
-    const li = document.createElement('li');
-    const ds = date.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
-    const cls = evt.personal ? 'ev-text ev-personal' : 'ev-text';
-    li.innerHTML = '<span class="ev-date">' + ds + '</span><span class="' + cls + '">' + evt.event + '</span>';
-    eventList.insertBefore(li, eventList.firstChild);
-    eventTotal++;
-    eventCountEl.textContent = eventTotal + (eventTotal===1?' event logged':' events logged');
-    while (eventList.children.length > 60) eventList.removeChild(eventList.lastChild);
-}
-
-// ── Birthday splash ───────────────────────────────────────────────────
-function triggerBirthday(date) {
-    if (bdayShown) return;
-    bdayShown = true;
-    paused = true;
-    pauseBtn.innerHTML = '&#9654; RESUME';
-    pauseBtn.classList.add('active');
-    pausedBadge.style.display = 'none';
-    statusText.textContent = 'BIRTHDAY!';
-    statusText.style.color = '#ffc94a';
-
-    const ms    = date - BORN;
-    const years = Math.floor(ms/(365.25*86400000));
-    const days  = Math.floor(ms/86400000);
-    document.getElementById('bday-years-line').textContent =
-        years + ' YEARS  \u2022  ' + days.toLocaleString() + ' DAYS AROUND THE SUN';
-
-    document.getElementById('bday-splash').classList.add('show');
-    if (!safeMode) startConfetti();
-}
-
-function closeBday() {
-    document.getElementById('bday-splash').classList.remove('show');
-    paused = false;
-    pauseBtn.innerHTML = '&#9646;&#9646; PAUSE';
-    pauseBtn.classList.remove('active');
-    statusText.textContent = 'ACTIVE';
-    statusText.style.color = '#00e8ff';
-    confettiActive = false;
-}
-
-// ── Confetti (canvas-based, no DOM thrash) ────────────────────────────
-const CONFETTI_COLORS = ['#ffc94a','#00e8ff','#ffffff','#ff9f43','#a29bfe','#55efc4'];
-function startConfetti() {
-    confettiActive = true;
-    confettiParticles = Array.from({length:120}, () => ({
-        x: Math.random()*confetti.width,
-        y: Math.random()*confetti.height - confetti.height,
-        w: Math.random()*8+4, h: Math.random()*4+3,
-        color: CONFETTI_COLORS[Math.floor(Math.random()*CONFETTI_COLORS.length)],
-        speed: Math.random()*3+1.5,
-        angle: Math.random()*360,
-        spin:  (Math.random()-.5)*4,
-        drift: (Math.random()-.5)*1.2
-    }));
-    animateConfetti();
-}
-
-function animateConfetti() {
-    if (!confettiActive) { cctx.clearRect(0,0,confetti.width,confetti.height); return; }
-    cctx.clearRect(0,0,confetti.width,confetti.height);
-    confettiParticles.forEach(p => {
-        p.y += p.speed; p.x += p.drift; p.angle += p.spin;
-        if (p.y > confetti.height + 10) {
-            p.y = -10; p.x = Math.random()*confetti.width;
-        }
-        cctx.save();
-        cctx.translate(p.x, p.y);
-        cctx.rotate(p.angle * Math.PI/180);
-        cctx.fillStyle = p.color;
-        cctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
-        cctx.restore();
-    });
-    requestAnimationFrame(animateConfetti);
-}
-
-// ── Pulse ─────────────────────────────────────────────────────────────
-function triggerPulse() {
-    if (pulseTimer) clearTimeout(pulseTimer);
-    pulseOverlay.classList.add('pulse-active');
-    pulseTimer = setTimeout(() => pulseOverlay.classList.remove('pulse-active'), 1400);
-}
-
-// ── Stats bar updates ─────────────────────────────────────────────────
-function updateStats(date) {
-    const elapsed = Math.floor((Date.now()-missionStart)/1000);
-    const m = Math.floor(elapsed/60), s = elapsed%60;
-    statElapsed.textContent = (m>0?m+'m ':'')+s+'s';
-    statSimdate.textContent = date.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
-    updateAheadCount();
-}
-
-// ── Main loop ─────────────────────────────────────────────────────────
-function animate() {
-    ctx.fillStyle = '#020205';
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-
-    stars.forEach(star => {
-        const c = star.warm ? 'rgba(255,180,0,' : 'rgba(255,255,255,';
-        ctx.fillStyle = c + star.opacity + ')';
-        ctx.beginPath();
-        ctx.arc(star.x, star.y, star.size, 0, Math.PI*2);
-        ctx.fill();
-    });
-
-    if (!paused && simDate < endDate) {
-        for (let i=0; i<daysPerFrame; i++) {
-            if (simDate >= endDate) break;
-            simDate.setDate(simDate.getDate()+1);
-            addStar();
-            checkEvent(simDate);
-        }
-        yearDisplay.innerText = simDate.getFullYear();
-        starCountEl.innerText = stars.length.toLocaleString();
-        updateClocks(simDate);
-        updateDaysSince(simDate);
-        updateStats(simDate);
-    }
-
-    requestAnimationFrame(animate);
-}
-
-animate();
+    hint.style.borderColor=isMob?'rgba(255,180,0,.4)':'rgba(0,242,255,.3)';
+    hint.style.color=isMob?'#ffe18a':'#b0f0ff';
+})();
 </script>
 </body>
 </html>
