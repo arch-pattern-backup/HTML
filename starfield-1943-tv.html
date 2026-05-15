@@ -33,17 +33,19 @@ canvas#stars{position:fixed;inset:0;z-index:0;}
 }
 
 #crawl-body {
-  width: 75%; max-width: 900px;
+  width: 75%;
+  max-width: 900px;
   transform-origin: 50% 100%;
-  /* Fixed: Start completely off-screen at the bottom */
+  /* This starts the element below the horizon line */
   transform: rotateX(25deg) translateY(100vh);
   animation: crawl var(--crawl-dur) linear forwards;
-  padding-bottom: 50vh;
+  /* ADD THIS: Pushes the text down so the top (Title) appears first */
+  padding-top: 100vh; 
 }
 
 @keyframes crawl {
-  0% { transform: rotateX(25deg) translateY(100vh); }
-  100% { transform: rotateX(25deg) translateY(-280vh); }
+  0% { transform: rotateX(25deg) translateY(0); }
+  100% { transform: rotateX(25deg) translateY(-100%); }
 }
 
 #cold-open{
@@ -232,15 +234,26 @@ const worldEvents = [
 // ── UTILITIES ─────────────────────────────────────────────────────
 function setText(id,v){ const el=document.getElementById(id); if(el) el.innerText=v; }
 
-function beginSim(){
-  if(crawlDone) return; crawlDone = true;
+function beginSim() {
+  if (crawlDone) return; 
+  crawlDone = true;
+
   const audio = document.getElementById('birthday-audio');
-  if(audio) audio.play().catch(e=>console.warn("Audio blocked"));
-  document.getElementById('crawl-stage').style.display = 'none';
-  document.getElementById('cold-open').style.display  = 'none';
-  document.getElementById('skip-hint').style.display  = 'none';
-  document.getElementById('sim-ui').classList.add('show');
-  startSimLoop();
+  if (audio) {
+    // We use a fresh play promise to bypass the 'interaction' gate
+    audio.play().then(() => {
+        console.log("Mehr is playing...");
+    }).catch(err => {
+        console.error("CORS or Path Error. Status:", err);
+        alert("Please ensure CORS is set to allow: https://arch-pattern-backup.github.io");
+    });
+  }
+
+  document.getElementById('crawl-stage').style.opacity = '1'; // Ensure visibility
+  document.getElementById('cold-open').style.opacity = '0';
+  document.getElementById('skip-hint').style.display = 'none';
+  
+  // Simulation UI stays hidden (opacity 0) until crawl is finished or skipped
 }
 
 document.addEventListener('click', beginSim);
