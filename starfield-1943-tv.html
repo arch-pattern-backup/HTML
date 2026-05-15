@@ -59,11 +59,13 @@ canvas#stars{position:fixed;inset:0;z-index:0;}
 #crawl-stage {
   position: fixed; inset: 0; z-index: 10;
   display: flex; flex-direction: column;
-  align-items: center; justify-content: flex-end;
+  align-items: center;
+  /* flex-start so the block's natural top is at the top of the stage,
+     letting translateY(100vh) push it fully below the screen */
+  justify-content: flex-start;
   overflow: hidden;
   perspective: 500px;
   perspective-origin: 50% 95%;
-  /* hidden until tap */
   opacity: 0;
 }
 #crawl-stage.running {
@@ -75,35 +77,25 @@ canvas#stars{position:fixed;inset:0;z-index:0;}
   width: 75%;
   max-width: 900px;
   transform-origin: 50% 100%;
-  padding-top: 100vh;
+  /* No padding-top. The block starts at the top of the flex container.
+     translateY(100vh) pushes the entire block below the visible screen.
+     The animation drives it upward from there. */
+  padding-bottom: 20vh; /* breathing room after the last line */
 
-  /*
-    KEY FIX:
-    - animation exists but is PAUSED
-    - we want the title to be just below the
-      bottom edge of the perspective plane at t=0,
-      then crest the horizon at ~2s.
-    - translateY(0) = title sitting below screen.
-    - We want ~2s before the title hits the horizon,
-      so we use animation-delay: -0s (start from 0%)
-      and let the crawl-dur control the full scroll.
-    - animation-play-state: paused until JS fires.
-  */
-  transform: rotateX(25deg) translateY(0);
+  transform: rotateX(25deg) translateY(100vh);
   animation: crawl var(--crawl-dur) linear forwards;
   animation-play-state: paused;
 }
 
-/* Once JS adds .running to #crawl-stage, we also
-   need the body to start. We target it via the
-   parent class so no extra JS is needed. */
 #crawl-stage.running #crawl-body {
   animation-play-state: running;
 }
 
 @keyframes crawl {
-  0%   { transform: rotateX(25deg) translateY(0); }
-  100% { transform: rotateX(25deg) translateY(-400vh); }
+  /* Start: entire block is below the screen */
+  0%   { transform: rotateX(25deg) translateY(100vh); }
+  /* End: entire block has scrolled above the screen */
+  100% { transform: rotateX(25deg) translateY(-500vh); }
 }
 
 .crawl-title{
