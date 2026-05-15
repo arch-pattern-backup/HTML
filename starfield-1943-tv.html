@@ -13,7 +13,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);
 canvas#stars{position:fixed;inset:0;z-index:0;}
 
 /* ═══════════════════════════════════════════════
-   CRAWL STAGE - FINAL RECTIFICATION
+   CRAWL STAGE - FINAL MISSION CONTROL FIX
 ═══════════════════════════════════════════════ */
 #crawl-stage {
   position: fixed; inset: 0; z-index: 10;
@@ -28,24 +28,23 @@ canvas#stars{position:fixed;inset:0;z-index:0;}
   width: 75%;
   max-width: 900px;
   transform-origin: 50% 100%;
-  /* We remove the static transform here. 
-     The animation will handle the starting position. 
-  */
+  /* WE REMOVE the translateY here entirely. 
+     The animation 0% frame will now handle the starting point. */
+  transform: rotateX(25deg); 
   animation: crawl var(--crawl-dur) linear forwards;
-  /* This padding is the key. It forces the text content 
-     down so that the first thing rising is the Title.
-  */
-  padding-top: 120vh; 
+  /* This pushes the text down 100% of the viewport height 
+     so the title starts off-screen at the bottom. */
+  padding-top: 100vh; 
 }
 
 @keyframes crawl {
   0% { 
-    /* Start with the element's top at the bottom of the screen */
+    /* Start at the bottom of the perspective plane */
     transform: rotateX(25deg) translateY(0); 
   }
   100% { 
-    /* Pull it all the way up through the vanishing point */
-    transform: rotateX(25deg) translateY(-450vh); 
+    /* Move UP until the entire padded block is gone from the top */
+    transform: rotateX(25deg) translateY(-400vh); 
   }
 }
 #cold-open{
