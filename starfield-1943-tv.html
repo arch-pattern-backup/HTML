@@ -36,17 +36,17 @@ canvas#stars{position:fixed;inset:0;z-index:0;}
   width: 75%;
   max-width: 900px;
   transform-origin: 50% 100%;
-  /* This pushes the actual text down 100% of the screen height */
+  /* This pushes the actual text content down so the top (Title) starts at the bottom of the screen */
   padding-top: 100vh; 
-  /* The element itself starts at the bottom of the perspective plane */
+  /* We start the entire element at 0 because the padding-top is doing the work */
   transform: rotateX(25deg) translateY(0);
   animation: crawl var(--crawl-dur) linear forwards;
 }
 
 @keyframes crawl {
   0% { transform: rotateX(25deg) translateY(0); }
-  /* We scroll the element UP by more than 100% to clear the viewport */
-  100% { transform: rotateX(25deg) translateY(-250%); }
+  /* We scroll UP until the element is completely gone from the top */
+  100% { transform: rotateX(25deg) translateY(-100%); }
 }
 
 #cold-open{
@@ -142,7 +142,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
 https://pub-4297bbb7b7b14af0a93e39d1b5b339db.r2.dev
 
 <audio id="birthday-audio" preload="auto" crossorigin="anonymous">
-  <source src="https://pub-4297bbb7b7b14af0a93e39d1b5b339db.r2.dev/audio-family/hot/eighty-three-stars-long.mp3" type="audio/mpeg">
+  <source src="https://pub-4297bbb7b7b14af0a93e39d1b5b339db.r2.dev/eighty-three-stars-long.mp3" type="audio/mpeg">
 </audio>
 
 <div id="cold-open"><p>A long time ago,<br>in a land far, far away&hellip;</p></div>
