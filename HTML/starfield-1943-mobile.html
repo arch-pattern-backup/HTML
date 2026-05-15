@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Starfield 1943 · Mobile</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --glow:#00f2ff; --gold:#ffc94a; --bg:#020205; }
+        *    { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+
+        body {
+            background:var(--bg); color:var(--glow);
+            font-family:'JetBrains Mono',monospace;
+            display:flex; flex-direction:column; align-items:center;
+            overflow-x:hidden; overflow-y:auto; min-height:100dvh;
+        }
+
+        canvas { position:fixed; top:0; left:0; z-index:-1; }
+
+        /* ── CROSS-LINK ─────────────────────────────────── */
+        .crosslink-bar {
+            width:100%; background:rgba(0,0,0,.92);
+            border-bottom:1px solid rgba(0,242,255,.15);
+            padding:6px 16px; display:flex; justify-content:flex-end;
+        }
+        .crosslink-btn {
+            background:rgba(0,242,255,.07); border:1px solid rgba(0,242,255,.3);
+            color:#b0eeff; font-family:'JetBrains Mono',monospace;
+            font-size:.6rem; letter-spacing:2px; padding:5px 14px;
+            text-decoration:none; display:inline-block;
+        }
+
+        /* ── STICKY HEADER ──────────────────────────────── */
+        header {
+            width:100%; background:rgba(0,0,0,.94);
+            border-bottom:1px solid rgba(0,242,255,.25);
+            position:sticky; top:0; z-index:50;
+            padding:10px 14px; display:flex;
+            justify-content:space-between; align-items:center;
+            gap:8px; flex-wrap:wrap;
+        }
+        .h-status { font-size:.6rem; letter-spacing:2px; color:#ffffff; }
+        .h-stars  { font-size:.6rem; letter-spacing:2px; color:var(--gold); }
+
+        /* icon toolbar */
+        .toolbar { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+        .tb-btn {
+            background:rgba(0,242,255,.07); border:1px solid rgba(0,242,255,.25);
+            color:#c0eeff; font-family:'JetBrains Mono',monospace;
+            font-size:.6rem; letter-spacing:1px; padding:6px 10px; cursor:pointer;
+            transition:background .15s; white-space:nowrap;
+        }
+        .tb-btn:hover,.tb-btn.active { background:rgba(0,242,255,.2); border-color:#00e8ff; color:#fff; }
+        .tb-btn.gold { border-color:rgba(255,180,0,.35); color:var(--gold); background:rgba(255,180,0,.06); }
+        .tb-btn.gold:hover { background:rgba(255,180,0,.15); }
+
+        /* speed row */
+        .speed-row {
+            width:100%; background:rgba(0,0,0,.85);
+            border-bottom:1px solid rgba(0,242,255,.1);
+            padding:6px 14px; display:flex; align-items:center; gap:10px;
+        }
+        .speed-row label { font-size:.55rem; letter-spacing:3px; color:rgba(0,242,255,.7); }
+        input[type=range] {
+            -webkit-appearance:none; flex:1; height:3px;
+            background:rgba(0,242,255,.25); border-radius:2px; cursor:pointer;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance:none; width:18px; height:18px;
+            border-radius:50%; background:#00e8ff; box-shadow:0 0 6px #00e8ff;
+        }
+        .speed-val { font-size:.65rem; color:#fff; min-width:20px; text-align:right; }
+
+        /* ── ODOMETER ────────────────────────────────────── */
+        .odometer {
+            font-size:3.6rem; font-weight:700; margin:20px 0 6px;
+            color:#fff; text-shadow:0 0 24px var(--glow),0 0 2px #fff;
+        }
+        .days-since {
+            font-size:.75rem; letter-spacing:2px; color:#fff;
+            background:rgba(0,0,0,.65); padding:5px 14px;
+            border:1px solid rgba(0,242,255,.15); margin-bottom:20px;
+            text-align:center;
+        }
+
+        /* ── WORLD CLOCKS — stacked ──────────────────────── */
+        .clock-container { width:92%; display:flex; flex-direction:column; gap:10px; }
+        .city-box {
+            background:rgba(0,0,0,.82); border:1px solid rgba(0,242,255,.25);
+            padding:12px 16px;
+            display:flex; justify-content:space-between; align-items:center;
+        }
+        .city-left  { display:flex; flex-direction:column; gap:3px; }
+        .city-name  { font-size:.65rem; letter-spacing:4px; color:#00e8ff; }
+        .city-date  { font-size:.78rem; color:#fff; }
+        .city-time  { font-size:1.5rem; font-weight:700; color:#fff; }
+
+        /* ── PANELS ──────────────────────────────────────── */
+        .panel {
+            width:92%; margin-top:14px;
+            background:rgba(0,0,0,.82);
+        }
+        .panel.sikh-panel { border:1px solid rgba(255,180,0,.35); }
+        .panel.world-panel { border:1px solid rgba(0,242,255,.25); }
+        .panel.ms-panel   { border:1px solid rgba(255,180,0,.4); display:none; }
+        .panel.ms-panel.open { display:block; }
+
+        .panel-hdr {
+            padding:10px 14px; font-size:.58rem; letter-spacing:4px;
+            display:flex; justify-content:space-between; align-items:center;
+            cursor:pointer; user-select:none;
+        }
+        .sikh-panel .panel-hdr  { color:var(--gold); border-bottom:1px solid rgba(255,180,0,.2); }
+        .world-panel .panel-hdr { color:#00e8ff;      border-bottom:1px solid rgba(0,242,255,.15); }
+        .ms-panel .panel-hdr    { color:var(--gold);  border-bottom:1px solid rgba(255,180,0,.2); }
+
+        .panel-body { overflow:hidden; max-height:0; transition:max-height .35s ease; }
+        .panel-body.open { max-height:400px; }
+
+        /* ── CATEGORY DROPDOWN ───────────────────────────── */
+        .cat-row {
+            padding:10px 14px;
+            border-bottom:1px solid rgba(0,242,255,.1);
+            display:flex; align-items:center; gap:10px;
+        }
+        .cat-row label { font-size:.55rem; letter-spacing:3px; color:rgba(0,242,255,.6); white-space:nowrap; }
+        .cat-select {
+            flex:1; background:rgba(0,0,0,.7); border:1px solid rgba(0,242,255,.3);
+            color:#d0f4ff; font-family:'JetBrains Mono',monospace;
+            font-size:.72rem; padding:6px 10px; cursor:pointer;
+            -webkit-appearance:none; appearance:none;
+            background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2300e8ff' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+            background-repeat:no-repeat; background-position:right 10px center;
+            padding-right:28px;
+        }
+        .cat-select:focus { outline:none; border-color:#00e8ff; }
+
+        /* event lists */
+        .evt-list { list-style:none; max-height:240px; overflow-y:auto; }
+        .evt-list li {
+            padding:9px 14px; border-bottom:1px solid rgba(255,255,255,.06);
+            animation:ef .4s ease forwards;
+        }
+        @keyframes ef { from{opacity:0;transform:translateY(3px)} to{opacity:1;transform:none} }
+        .evt-list li:last-child { border:none; }
+        .ev-date  { font-size:.6rem; color:#00e8ff; display:block; margin-bottom:2px; }
+        .ev-text  { font-size:.75rem; color:#fff3d4; line-height:1.45; display:block; }
+        .ev-personal { color:#ffe18a; }
+        .we-tag   { font-size:.5rem; letter-spacing:2px; border:1px solid; padding:1px 5px; margin-left:6px; }
+
+        /* ── MILESTONE FORM ──────────────────────────────── */
+        .ms-form { padding:14px; display:flex; flex-direction:column; gap:10px; }
+        .ms-form label  { font-size:.55rem; letter-spacing:3px; color:rgba(0,242,255,.7); }
+        .ms-form input  {
+            background:rgba(0,242,255,.06); border:1px solid rgba(0,242,255,.25);
+            color:#fff; font-family:'JetBrains Mono',monospace;
+            font-size:.8rem; padding:8px 10px; width:100%;
+        }
+        .ms-form input:focus { outline:none; border-color:#00e8ff; }
+        .ms-form input::placeholder { color:rgba(255,255,255,.2); }
+        .ms-submit {
+            background:rgba(255,180,0,.1); border:1px solid rgba(255,180,0,.5);
+            color:var(--gold); font-family:'JetBrains Mono',monospace;
+            font-size:.65rem; letter-spacing:3px; padding:9px;
+            cursor:pointer; width:100%;
+        }
+        #ms-error-m { font-size:.62rem; color:#ff7070; letter-spacing:1px; display:none; padding:0 14px 10px; }
+        #ms-saved-m { list-style:none; border-top:1px solid rgba(255,180,0,.15); }
+        #ms-saved-m li {
+            display:flex; justify-content:space-between; align-items:center;
+            padding:7px 14px; font-size:.68rem; color:#fff3d4;
+            border-bottom:1px solid rgba(255,180,0,.08);
+        }
+        .ms-del { background:none; border:none; color:rgba(255,100,100,.5); cursor:pointer; font-size:.9rem; }
+
+        /* ── BIRTHDAY SPLASH ─────────────────────────────── */
+        #bday-splash {
+            display:none; position:fixed; inset:0; z-index:200;
+            background:rgba(0,0,0,.9);
+            flex-direction:column; align-items:center; justify-content:center;
+            text-align:center; padding:28px 20px;
+        }
+        #bday-splash.show { display:flex; }
+        .bday-msg {
+            font-size:clamp(1.8rem,8vw,3.2rem); font-weight:700; color:var(--gold);
+            text-shadow:0 0 40px rgba(255,180,0,.9);
+            letter-spacing:4px; line-height:1.35;
+            animation:bp 2s ease-in-out infinite alternate;
+        }
+        @keyframes bp { from{text-shadow:0 0 20px rgba(255,180,0,.6)} to{text-shadow:0 0 60px rgba(255,220,80,.95)} }
+        .bday-sub   { margin-top:16px; font-size:.72rem; letter-spacing:3px; color:#fff; opacity:.8; }
+        .bday-years { margin-top:10px; font-size:1.1rem; letter-spacing:2px; color:#00e8ff; }
+        #bday-close {
+            margin-top:28px; background:none; border:1px solid rgba(255,180,0,.5);
+            color:var(--gold); font-family:'JetBrains Mono',monospace;
+            font-size:.7rem; letter-spacing:3px; padding:10px 24px; cursor:pointer;
+            width:100%; max-width:300px;
+        }
+
+        #confetti-canvas { position:fixed; inset:0; z-index:199; pointer-events:none; }
+
+        /* ── PAUSED BADGE ───────────────────────────────── */
+        #paused-badge {
+            display:none; position:fixed; top:50%; left:50%;
+            transform:translate(-50%,-50%);
+            font-size:.8rem; letter-spacing:6px; color:#fff;
+            background:rgba(0,0,0,.75); padding:12px 22px;
+            border:1px solid rgba(0,242,255,.3); pointer-events:none; z-index:60;
+        }
+
+        /* ── PULSE — safe slow fade ──────────────────────── */
+        #pulse-overlay {
+            position:fixed; inset:0; pointer-events:none; z-index:98; opacity:0;
+            background:radial-gradient(ellipse at center,rgba(255,165,0,.15) 0%,transparent 70%);
+            transition:opacity 1.4s ease-out;
+        }
+        #pulse-overlay.pulse-active { opacity:1; }
+
+        /* ── FOOTER ─────────────────────────────────────── */
+        .footer-grid {
+            width:92%; margin:14px 0 28px;
+            display:grid; grid-template-columns:1fr 1fr; gap:8px;
+        }
+        .foot-cell {
+            background:rgba(0,0,0,.75); border:1px solid rgba(0,242,255,.15);
+            padding:8px 12px;
+        }
+        .foot-label { font-size:.48rem; letter-spacing:3px; color:rgba(0,242,255,.55); }
+        .foot-val   { font-size:.68rem; letter-spacing:2px; color:#d0f4ff; margin-top:2px; }
+        .foot-val.gold { color:var(--gold); }
+    </style>
+</head>
+<body>
+
+<canvas id="starfield"></canvas>
+<canvas id="confetti-canvas"></canvas>
+<div id="pulse-overlay"></div>
+<div id="paused-badge">&#9646;&#9646; PAUSED</div>
+
+<!-- cross-link -->
+<div class="crosslink-bar">
+    <a class="crosslink-btn" href="starfield-1943.html">&#128187; OPEN DESKTOP VERSION</a>
+</div>
+
+<!-- birthday splash -->
+<div id="bday-splash" role="dialog">
+    <div class="bday-msg">&#127881; HAPPY BIRTHDAY<br>DAD &#127881;</div>
+    <div class="bday-sub">TEMPORAL COORDINATES LOCKED &mdash; 16 MAY 2026</div>
+    <div class="bday-years" id="bday-years-line"></div>
+    <button id="bday-close" onclick="closeBday()">CONTINUE JOURNEY &#10132;</button>
+</div>
+
+<!-- header -->
+<header>
+    <div>
+        <div class="h-status" id="status-text">STATUS: ACTIVE</div>
+        <div class="h-stars">&#9900; STARS: <span id="star-count">0</span></div>
+    </div>
+    <div class="toolbar">
+        <button class="tb-btn" id="pause-btn">&#9646;&#9646; PAUSE</button>
+        <button class="tb-btn" id="safe-btn">SAFE MODE</button>
+        <button class="tb-btn gold" id="add-btn">+ MILESTONE</button>
+    </div>
+</header>
+
+<!-- speed row -->
+<div class="speed-row">
+    <label for="speed-m">SPEED</label>
+    <input type="range" id="speed-m" min="1" max="10" value="5">
+    <span class="speed-val" id="speed-val-m">5</span>
+</div>
+
+<!-- odometer -->
+<div class="odometer" id="year-display">1943</div>
+<div class="days-since" id="days-since">&nbsp;</div>
+
+<!-- clocks -->
+<div class="clock-container">
+    <div class="city-box">
+        <div class="city-left">
+            <span class="city-name">SEATTLE</span>
+            <span id="seattle-date" class="city-date">-- --- ----</span>
+        </div>
+        <span id="seattle-time" class="city-time">--:--</span>
+    </div>
+    <div class="city-box">
+        <div class="city-left">
+            <span class="city-name">BIRMINGHAM</span>
+            <span id="uk-date" class="city-date">-- --- ----</span>
+        </div>
+        <span id="uk-time" class="city-time">--:--</span>
+    </div>
+    <div class="city-box">
+        <div class="city-left">
+            <span class="city-name">DELHI</span>
+            <span id="india-date" class="city-date">-- --- ----</span>
+        </div>
+        <span id="india-time" class="city-time">--:--</span>
+    </div>
+</div>
+
+<!-- add milestone panel -->
+<div class="panel ms-panel" id="ms-panel-m">
+    <div class="panel-hdr" onclick="togglePanel('ms-panel-m','ms-body-m')">
+        <span>&#9900; ADD YOUR MILESTONE</span><span id="ms-arrow-m">&#9660;</span>
+    </div>
+    <div class="panel-body open" id="ms-body-m">
+        <div class="ms-form">
+            <label>DATE</label>
+            <input type="date" id="ms-date-m">
+            <label>DESCRIPTION</label>
+            <input type="text" id="ms-text-m" placeholder="e.g. Wedding day" maxlength="80">
+            <button class="ms-submit" onclick="addMilestone()">ADD MILESTONE &#10132;</button>
+        </div>
+        <div id="ms-error-m"></div>
+        <ul id="ms-saved-m"></ul>
+    </div>
+</div>
+
+<!-- sikh calendar panel -->
+<div class="panel sikh-panel">
+    <div class="panel-hdr" onclick="togglePanel(this.parentElement,this.nextElementSibling)">
+        <span>&#9900; SIKH MILESTONES</span>
+        <span id="sikh-count">0 events</span>
+    </div>
+    <div class="panel-body open" id="sikh-body">
+        <ul class="evt-list" id="sikh-list" aria-live="polite"></ul>
+    </div>
+</div>
+
+<!-- world events panel -->
+<div class="panel world-panel">
+    <div class="panel-hdr" onclick="togglePanel(this.parentElement,this.nextElementSibling)">
+        <span>&#9900; WORLD EVENTS</span>
+        <span id="we-count-m">0 events</span>
+    </div>
+    <div class="panel-body open" id="we-body">
+        <!-- category dropdown -->
+        <div class="cat-row">
+            <label for="cat-select">FILTER</label>
+            <select class="cat-select" id="cat-select">
+                <option value="all">ALL EVENTS</option>
+                <option value="war">WAR &amp; CONFLICT</option>
+                <option value="politics">POLITICS</option>
+                <option value="science">SCIENCE</option>
+                <option value="space">SPACE</option>
+                <option value="tech">TECHNOLOGY</option>
+                <option value="sport">SPORT</option>
+                <option value="culture">CULTURE</option>
+                <option value="nature">NATURE</option>
+            </select>
+        </div>
+        <ul class="evt-list" id="we-list-m" aria-live="polite"></ul>
+    </div>
+</div>
+
+<!-- footer -->
+<div class="footer-grid">
+    <div class="foot-cell">
+        <div class="foot-label">VELOCITY</div>
+        <div class="foot-val" id="vel-m">5 DAYS/FRAME</div>
+    </div>
+    <div class="foot-cell">
+        <div class="foot-label">STARS</div>
+        <div class="foot-val gold" id="star-foot">0</div>
+    </div>
+    <div class="foot-cell">
+        <div class="foot-label">SIM DATE</div>
+        <div class="foot-val" id="stat-simdate-m">&mdash;</div>
+    </div>
+    <div class="foot-cell">
+        <div class="foot-label">COORDINATES</div>
+        <div class="foot-val">52.49&deg;N 1.89&deg;W</div>
+    </div>
+</div>
+
+<script>
+// ── shared data ───────────────────────────────────────────────────────
+const sikhCalendar = [
+    { month:9,  day:8,  event:"Birthday of Rachhpal S. Atwal", personal:true },
+    { month:4,  day:16, year:2026, event:"Happy Birthday Dad! \u2605 Rachhpal S. Atwal \u2605", personal:true, bday:true },
+    { month:0,  day:5,  event:"Parkash Guru Gobind Singh Ji" },
+    { month:3,  day:14, event:"Parkash Guru Angad Dev Ji" },
+    { month:6,  day:23, event:"Parkash Guru Harkrishan Sahib Ji" },
+    { month:10, day:24, event:"Gurpurab Guru Nanak Dev Ji" },
+    { month:3,  day:14, event:"Vaisakhi \u2014 Birth of the Khalsa (1699)" },
+    { month:2,  day:12, event:"Shaheedi Bhai Subeg Singh & Bhai Shahbaz Singh" },
+    { month:4,  day:16, event:"Shaheedi Guru Arjan Dev Ji" },
+    { month:5,  day:25, event:"Shaheedi Baba Banda Singh Ji Bahadur" },
+    { month:6,  day:9,  event:"Shaheedi Bhai Mani Singh Ji" },
+    { month:6,  day:16, event:"Shaheedi Bhai Taru Singh Ji" },
+    { month:10, day:13, event:"Shaheedi Baba Deep Singh Ji Shaheed" },
+    { month:10, day:24, event:"Shaheedi Bhai Mati Das Ji & Bhai Sati Das Ji" },
+    { month:11, day:21, event:"Shaheedi Sahibzada Ajit Singh & Jujhar Singh \u2014 Chamkaur" },
+    { month:11, day:26, event:"Shaheedi Sahibzada Zorawar Singh, Fateh Singh & Mata Gujri Ji" },
+    { month:2,  day:14, event:"Nanakshahi New Year \u2014 1 Chet" },
+    { month:2,  day:15, event:"Hola Mohalla \u2014 Sikh Martial Arts Festival" },
+    { month:0,  day:13, event:"Mela Maghi \u2014 Battle of Muktsar Remembrance" },
+    { month:9,  day:20, event:"Diwali / Bandi Chhor Divas" },
+    { month:7,  day:1,  event:"First Parkash Guru Granth Sahib Ji (1604)" },
+    { month:7,  day:30, event:"Completion of Guru Granth Sahib Ji" },
+    { month:3,  day:13, event:"Sikh Dastaar Divas \u2014 Sikh Turban Day" },
+    { month:4,  day:4,  event:"1984 Ghallughara \u2014 Attack on Sri Akal Takht Sahib" },
+    { month:6,  day:20, event:"Miri-Piri Day \u2014 Dual Swords of Guru Hargobind Ji" },
+    { month:9,  day:1,  event:"Foundation Day \u2014 Singh Sabha" },
+    { month:0,  day:13, event:"Foundation Day \u2014 Sri Harimandar Sahib" },
+    { month:0,  day:19, event:"Morcha for Keys \u2014 Sri Harimandar Sahib (1921)" },
+    { month:1,  day:21, event:"Saka Nankana Sahib (1921)" },
+    { month:2,  day:9,  event:"Birthday Sahibzada Jujhar Singh Ji" },
+    { month:10, day:28, event:"Birthday Sahibzada Zorawar Singh Ji" },
+    { month:11, day:11, event:"Birthday Sahibzada Ajit Singh Ji" },
+    { month:11, day:13, event:"Foundation Day \u2014 Shromani Akali Dal" },
+];
+
+const worldEvents = [
+    { y:1943,m:1, d:31,cat:"war",     t:"Battle of Stalingrad ends \u2014 WW2 turning point" },
+    { y:1944,m:5, d:6, cat:"war",     t:"D-Day: Allied forces land at Normandy" },
+    { y:1945,m:5, d:8, cat:"war",     t:"VE Day \u2014 Victory in Europe" },
+    { y:1945,m:8, d:15,cat:"war",     t:"VJ Day \u2014 Japan surrenders, WW2 ends" },
+    { y:1950,m:6, d:25,cat:"war",     t:"Korean War begins" },
+    { y:1953,m:7, d:27,cat:"war",     t:"Korean War armistice signed" },
+    { y:1962,m:10,d:28,cat:"war",     t:"Cuban Missile Crisis resolved \u2014 nuclear war averted" },
+    { y:1982,m:6, d:14,cat:"war",     t:"Falklands War ends \u2014 British victory" },
+    { y:1991,m:2, d:28,cat:"war",     t:"Gulf War ends \u2014 Kuwait liberated" },
+    { y:1945,m:6, d:26,cat:"politics",t:"United Nations Charter signed" },
+    { y:1947,m:8, d:15,cat:"politics",t:"India gains independence" },
+    { y:1947,m:8, d:14,cat:"politics",t:"Pakistan gains independence" },
+    { y:1948,m:5, d:14,cat:"politics",t:"State of Israel declared" },
+    { y:1963,m:8, d:28,cat:"politics",t:"MLK delivers 'I Have a Dream' speech" },
+    { y:1964,m:7, d:2, cat:"politics",t:"US Civil Rights Act signed" },
+    { y:1971,m:12,d:16,cat:"politics",t:"Bangladesh gains independence" },
+    { y:1989,m:11,d:9, cat:"politics",t:"Berlin Wall falls" },
+    { y:1990,m:2, d:11,cat:"politics",t:"Nelson Mandela freed after 27 years" },
+    { y:1991,m:12,d:25,cat:"politics",t:"Soviet Union dissolves \u2014 Cold War ends" },
+    { y:1994,m:4, d:27,cat:"politics",t:"South Africa's first democratic elections" },
+    { y:1953,m:4, d:25,cat:"science", t:"Watson & Crick publish DNA double helix" },
+    { y:1954,m:4, d:12,cat:"science", t:"Polio vaccine proven effective \u2014 Salk" },
+    { y:1967,m:12,d:3, cat:"science", t:"First human heart transplant (Barnard)" },
+    { y:1978,m:7, d:25,cat:"science", t:"World's first IVF baby born \u2014 Louise Brown" },
+    { y:1980,m:5, d:8, cat:"science", t:"WHO declares smallpox eradicated" },
+    { y:1990,m:4, d:25,cat:"science", t:"Hubble Space Telescope launched" },
+    { y:1996,m:7, d:5, cat:"science", t:"Dolly the sheep \u2014 first cloned mammal" },
+    { y:2000,m:6, d:26,cat:"science", t:"Human Genome Project draft complete" },
+    { y:2012,m:7, d:4, cat:"science", t:"Higgs Boson discovered at CERN" },
+    { y:2019,m:4, d:10,cat:"science", t:"First image of a black hole captured" },
+    { y:1957,m:10,d:4, cat:"space",   t:"Sputnik 1 \u2014 Space Age begins" },
+    { y:1961,m:4, d:12,cat:"space",   t:"Yuri Gagarin \u2014 first human in space" },
+    { y:1969,m:7, d:21,cat:"space",   t:"Neil Armstrong's first steps on the Moon" },
+    { y:1981,m:4, d:12,cat:"space",   t:"Space Shuttle Columbia \u2014 first flight" },
+    { y:1990,m:4, d:25,cat:"space",   t:"Hubble Space Telescope deployed" },
+    { y:2004,m:1, d:3, cat:"space",   t:"Mars rover Spirit lands on Mars" },
+    { y:2021,m:12,d:25,cat:"space",   t:"James Webb Space Telescope launched" },
+    { y:2023,m:8, d:23,cat:"space",   t:"Chandrayaan-3 \u2014 India lands on Moon's south pole" },
+    { y:1947,m:12,d:23,cat:"tech",    t:"Transistor invented at Bell Labs" },
+    { y:1969,m:10,d:29,cat:"tech",    t:"ARPANET first message \u2014 internet born" },
+    { y:1976,m:4, d:1, cat:"tech",    t:"Apple Computer founded" },
+    { y:1983,m:1, d:1, cat:"tech",    t:"TCP/IP adopted \u2014 modern internet born" },
+    { y:1989,m:3, d:12,cat:"tech",    t:"Tim Berners-Lee proposes the World Wide Web" },
+    { y:1991,m:8, d:6, cat:"tech",    t:"World Wide Web goes public" },
+    { y:1998,m:9, d:4, cat:"tech",    t:"Google founded" },
+    { y:2007,m:1, d:9, cat:"tech",    t:"Apple iPhone announced" },
+    { y:2022,m:11,d:30,cat:"tech",    t:"ChatGPT released \u2014 AI era goes mainstream" },
+    { y:1948,m:7, d:29,cat:"sport",   t:"London Olympics \u2014 first post-war Games" },
+    { y:1966,m:7, d:30,cat:"sport",   t:"England win the FIFA World Cup" },
+    { y:1983,m:7, d:11,cat:"sport",   t:"India win Cricket World Cup \u2014 Kapil Dev" },
+    { y:2003,m:11,d:22,cat:"sport",   t:"England win Rugby World Cup" },
+    { y:2011,m:4, d:2, cat:"sport",   t:"India win Cricket World Cup on home soil" },
+    { y:1953,m:6, d:2, cat:"culture", t:"Queen Elizabeth II crowned" },
+    { y:1963,m:11,d:22,cat:"culture", t:"JFK assassinated in Dallas" },
+    { y:1969,m:8, d:15,cat:"culture", t:"Woodstock \u2014 400,000 gather for peace & music" },
+    { y:1977,m:5, d:25,cat:"culture", t:"Star Wars released" },
+    { y:1985,m:7, d:13,cat:"culture", t:"Live Aid concert \u2014 $150M raised" },
+    { y:2022,m:9, d:8, cat:"culture", t:"Queen Elizabeth II dies after 70-year reign" },
+    { y:1970,m:4, d:22,cat:"nature",  t:"First Earth Day \u2014 birth of environmentalism" },
+    { y:1986,m:4, d:26,cat:"nature",  t:"Chernobyl disaster" },
+    { y:2004,m:12,d:26,cat:"nature",  t:"Indian Ocean tsunami \u2014 global response" },
+    { y:2020,m:1, d:30,cat:"nature",  t:"COVID-19 declared global emergency" },
+    { y:2021,m:8, d:9, cat:"nature",  t:"IPCC: Code Red for humanity \u2014 climate crisis" },
+];
+
+const catColors = {
+    war:"#ff7070", politics:"#a29bfe", science:"#55efc4",
+    space:"#74b9ff", tech:"#fdcb6e", sport:"#fd79a8",
+    culture:"#e17055", nature:"#00b894"
+};
+
+// ── State ─────────────────────────────────────────────────────────────
+const canvas   = document.getElementById('starfield');
+const ctx      = canvas.getContext('2d');
+const confCvs  = document.getElementById('confetti-canvas');
+const cctx     = confCvs.getContext('2d');
+let stars=[], simDate=new Date(1943,10,8);
+const BORN=new Date(1943,10,8), endDate=new Date();
+let paused=false, safeMode=false, daysPerFrame=5;
+let starburstCount=0, bdayShown=false;
+let confettiParticles=[], confettiActive=false;
+let userMilestones=[];
+let sikhTotal=0, weTotal=0;
+let pulseTimer=null;
+
+// ── Controls ──────────────────────────────────────────────────────────
+document.getElementById('pause-btn').addEventListener('click',()=>{
+    paused=!paused;
+    const btn=document.getElementById('pause-btn');
+    btn.innerHTML=paused?'&#9654; RESUME':'&#9646;&#9646; PAUSE';
+    btn.classList.toggle('active',paused);
+    document.getElementById('paused-badge').style.display=paused?'block':'none';
+    document.getElementById('status-text').textContent=paused?'STATUS: PAUSED':'STATUS: ACTIVE';
+});
+document.getElementById('safe-btn').addEventListener('click',()=>{
+    safeMode=!safeMode;
+    const btn=document.getElementById('safe-btn');
+    btn.classList.toggle('active',safeMode);
+    btn.textContent=safeMode?'SAFE ON':'SAFE MODE';
+    const po=document.getElementById('pulse-overlay');
+    if(safeMode){po.style.transition='none';po.style.opacity='0';po.classList.remove('pulse-active');}
+    else po.style.transition='opacity 1.4s ease-out';
+});
+document.getElementById('add-btn').addEventListener('click',()=>{
+    const p=document.getElementById('ms-panel-m');
+    p.classList.toggle('open');
+    document.getElementById('add-btn').classList.toggle('active',p.classList.contains('open'));
+});
+document.getElementById('speed-m').addEventListener('input',function(){
+    daysPerFrame=parseInt(this.value);
+    document.getElementById('speed-val-m').textContent=daysPerFrame;
+    document.getElementById('vel-m').textContent=daysPerFrame+' DAYS/FRAME';
+});
+
+// collapsible panels
+function togglePanel(panelEl, bodyEl) {
+    if(typeof panelEl==='string') panelEl=document.getElementById(panelEl);
+    if(typeof bodyEl==='string')  bodyEl=document.getElementById(bodyEl);
+    bodyEl.classList.toggle('open');
+}
+
+// ── Milestones ────────────────────────────────────────────────────────
+function addMilestone(){
+    const dv=document.getElementById('ms-date-m').value;
+    const tv=document.getElementById('ms-text-m').value.trim();
+    const err=document.getElementById('ms-error-m');
+    err.style.display='none';
+    if(!dv){err.textContent='PLEASE SELECT A DATE';err.style.display='block';return;}
+    if(!tv){err.textContent='PLEASE ENTER A DESCRIPTION';err.style.display='block';return;}
+    const p=dv.split('-');
+    userMilestones.push({month:parseInt(p[1])-1,day:parseInt(p[2]),year:parseInt(p[0]),event:tv,personal:true});
+    renderSaved();
+    document.getElementById('ms-date-m').value='';
+    document.getElementById('ms-text-m').value='';
+}
+function renderSaved(){
+    const ul=document.getElementById('ms-saved-m');
+    ul.innerHTML='';
+    userMilestones.forEach((ms,i)=>{
+        const li=document.createElement('li');
+        const ds=new Date(ms.year,ms.month,ms.day).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+        li.innerHTML='<span><span style="color:#00e8ff;font-size:.6rem">'+ds+'</span> \u2014 '+ms.event+'</span>'
+            +'<button class="ms-del" onclick="delMS('+i+')">&#10005;</button>';
+        ul.appendChild(li);
+    });
+}
+function delMS(i){userMilestones.splice(i,1);renderSaved();}
+
+// ── Canvas ────────────────────────────────────────────────────────────
+function resize(){canvas.width=confCvs.width=window.innerWidth;canvas.height=confCvs.height=window.innerHeight;}
+window.addEventListener('resize',resize);resize();
+
+function addStar(){
+    const w=starburstCount>0;if(w)starburstCount--;
+    stars.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,
+        size:w?Math.random()*3+1:Math.random()*2,opacity:Math.random(),warm:w});
+}
+
+// ── Clocks ────────────────────────────────────────────────────────────
+function updateClocks(d){
+    const t={hour:'2-digit',minute:'2-digit',hour12:true};
+    const dt={day:'2-digit',month:'short',year:'numeric'};
+    document.getElementById('seattle-time').innerText=d.toLocaleTimeString('en-US',{...t,timeZone:'America/Los_Angeles'});
+    document.getElementById('seattle-date').innerText=d.toLocaleDateString('en-US',{...dt,timeZone:'America/Los_Angeles'});
+    document.getElementById('uk-time').innerText=d.toLocaleTimeString('en-GB',{...t,timeZone:'Europe/London'});
+    document.getElementById('uk-date').innerText=d.toLocaleDateString('en-GB',{...dt,timeZone:'Europe/London'});
+    document.getElementById('india-time').innerText=d.toLocaleTimeString('en-IN',{...t,timeZone:'Asia/Kolkata'});
+    document.getElementById('india-date').innerText=d.toLocaleDateString('en-IN',{...dt,timeZone:'Asia/Kolkata'});
+}
+
+function updateDaysSince(date){
+    const ms=date-BORN;if(ms<0)return;
+    const days=Math.floor(ms/86400000);
+    const yrs=(ms/(365.25*86400000)).toFixed(2);
+    document.getElementById('days-since').textContent=days.toLocaleString()+' DAYS (\u00A0'+yrs+' YEARS\u00A0)';
+}
+
+// ── Events ────────────────────────────────────────────────────────────
+function checkEvent(date){
+    const m=date.getMonth(),d=date.getDate(),y=date.getFullYear();
+    sikhCalendar.filter(e=>e.month===m&&e.day===d&&(!e.year||e.year===y)).forEach(evt=>{
+        logSikh(evt,date);
+        if(evt.bday) triggerBirthday(date);
+        else if(!safeMode){triggerPulse();starburstCount=10;}
+    });
+    const selCat=document.getElementById('cat-select').value;
+    worldEvents.filter(e=>e.y===y&&e.m===m+1&&e.d===d).forEach(evt=>{
+        if(selCat==='all'||selCat===evt.cat) logWorldEvt(evt,date);
+    });
+    userMilestones.filter(e=>e.month===m&&e.day===d&&(!e.year||e.year===y)).forEach(evt=>{
+        logSikh(evt,date);
+        if(!safeMode){triggerPulse();starburstCount=8;}
+    });
+}
+
+function logSikh(evt,date){
+    const li=document.createElement('li');
+    const ds=date.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    const cls=evt.personal?'ev-text ev-personal':'ev-text';
+    li.innerHTML='<span class="ev-date">'+ds+'</span><span class="'+cls+'">'+evt.event+'</span>';
+    const ul=document.getElementById('sikh-list');
+    ul.insertBefore(li,ul.firstChild);
+    while(ul.children.length>60)ul.removeChild(ul.lastChild);
+    sikhTotal++;
+    document.getElementById('sikh-count').textContent=sikhTotal+' events';
+}
+
+function logWorldEvt(evt,date){
+    const li=document.createElement('li');
+    const ds=date.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+    const col=catColors[evt.cat]||'#00e8ff';
+    const tag=(evt.cat||'').toUpperCase();
+    li.innerHTML='<span class="ev-date">'+ds+'<span class="we-tag" style="color:'+col+';border-color:'+col+'44">'+tag+'</span></span>'
+        +'<span class="ev-text">'+evt.t+'</span>';
+    const ul=document.getElementById('we-list-m');
+    ul.insertBefore(li,ul.firstChild);
+    while(ul.children.length>80)ul.removeChild(ul.lastChild);
+    weTotal++;
+    document.getElementById('we-count-m').textContent=weTotal+' events';
+}
+
+// ── Birthday ──────────────────────────────────────────────────────────
+function triggerBirthday(date){
+    if(bdayShown)return; bdayShown=true;
+    paused=true;
+    document.getElementById('pause-btn').innerHTML='&#9654; RESUME';
+    document.getElementById('pause-btn').classList.add('active');
+    document.getElementById('status-text').textContent='STATUS: BIRTHDAY!';
+    const ms=date-BORN;
+    const yrs=Math.floor(ms/(365.25*86400000));
+    const days=Math.floor(ms/86400000);
+    document.getElementById('bday-years-line').textContent=yrs+' YEARS \u2022 '+days.toLocaleString()+' DAYS AROUND THE SUN';
+    document.getElementById('bday-splash').classList.add('show');
+    if(!safeMode)startConfetti();
+}
+function closeBday(){
+    document.getElementById('bday-splash').classList.remove('show');
+    paused=false;
+    document.getElementById('pause-btn').innerHTML='&#9646;&#9646; PAUSE';
+    document.getElementById('pause-btn').classList.remove('active');
+    document.getElementById('status-text').textContent='STATUS: ACTIVE';
+    confettiActive=false;
+}
+
+// ── Confetti ──────────────────────────────────────────────────────────
+const CC=['#ffc94a','#00e8ff','#ffffff','#ff9f43','#a29bfe','#55efc4'];
+function startConfetti(){
+    confettiActive=true;
+    confettiParticles=Array.from({length:100},()=>({
+        x:Math.random()*confCvs.width,y:Math.random()*confCvs.height-confCvs.height,
+        w:Math.random()*8+4,h:Math.random()*4+3,
+        color:CC[Math.floor(Math.random()*CC.length)],
+        speed:Math.random()*3+1.5,angle:Math.random()*360,
+        spin:(Math.random()-.5)*4,drift:(Math.random()-.5)*1.2
+    }));
+    animateConfetti();
+}
+function animateConfetti(){
+    if(!confettiActive){cctx.clearRect(0,0,confCvs.width,confCvs.height);return;}
+    cctx.clearRect(0,0,confCvs.width,confCvs.height);
+    confettiParticles.forEach(p=>{
+        p.y+=p.speed;p.x+=p.drift;p.angle+=p.spin;
+        if(p.y>confCvs.height+10){p.y=-10;p.x=Math.random()*confCvs.width;}
+        cctx.save();cctx.translate(p.x,p.y);cctx.rotate(p.angle*Math.PI/180);
+        cctx.fillStyle=p.color;cctx.fillRect(-p.w/2,-p.h/2,p.w,p.h);cctx.restore();
+    });
+    requestAnimationFrame(animateConfetti);
+}
+
+// ── Pulse ─────────────────────────────────────────────────────────────
+function triggerPulse(){
+    if(pulseTimer)clearTimeout(pulseTimer);
+    const po=document.getElementById('pulse-overlay');
+    po.classList.add('pulse-active');
+    pulseTimer=setTimeout(()=>po.classList.remove('pulse-active'),1400);
+}
+
+// ── Main loop ─────────────────────────────────────────────────────────
+function animate(){
+    ctx.fillStyle='#020205';ctx.fillRect(0,0,canvas.width,canvas.height);
+    stars.forEach(s=>{
+        ctx.fillStyle=(s.warm?'rgba(255,180,0,':'rgba(255,255,255,')+s.opacity+')';
+        ctx.beginPath();ctx.arc(s.x,s.y,s.size,0,Math.PI*2);ctx.fill();
+    });
+    if(!paused&&simDate<endDate){
+        for(let i=0;i<daysPerFrame;i++){
+            if(simDate>=endDate)break;
+            simDate.setDate(simDate.getDate()+1);
+            addStar();checkEvent(simDate);
+        }
+        document.getElementById('year-display').innerText=simDate.getFullYear();
+        document.getElementById('star-count').innerText=stars.length.toLocaleString();
+        document.getElementById('star-foot').innerText=stars.length.toLocaleString();
+        document.getElementById('stat-simdate-m').innerText=simDate.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+        updateClocks(simDate);updateDaysSince(simDate);
+    }
+    requestAnimationFrame(animate);
+}
+animate();
+</script>
+</body>
+</html>
