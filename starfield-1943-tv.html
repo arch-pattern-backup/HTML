@@ -466,52 +466,78 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
   <button id="bday-close" onclick="closeBday()">CONTINUE THE JOURNEY &#10132;</button>
 </div>
 
-<script>
-const BORN = new Date(1943,10,8);
-const endDate = new Date();
+<audio id="birthday-audio" preload="auto">
+  <source src="https://your-bucket-url.com/eighty-three-stars-long.mp3" type="audio/mpeg">
+</audio>
 
-// ── Set day count in crawl ─────────────────────────────────────────
-(function(){
-  const ms = new Date(2026,4,16) - BORN;
-  const days = Math.floor(ms/86400000);
-  document.getElementById('crawl-days').textContent =
-    days.toLocaleString() + ' DAYS';
-})();
-
-// ── Crawl timing & skip ───────────────────────────────────────────
-const CRAWL_DUR = 110; // seconds
-document.documentElement.style.setProperty('--crawl-dur', CRAWL_DUR+'s');
-
-let crawlDone = false;
-function beginSim(){
-  if(crawlDone) return; crawlDone = true;
-  document.getElementById('crawl-stage').style.display = 'none';
-  document.getElementById('cold-open').style.display  = 'none';
-  document.getElementById('skip-hint').style.display  = 'none';
-  document.getElementById('sim-ui').classList.add('show');
-  startSimLoop();
+<style>
+/* 2. Enhanced Perspective and Scrolling Logic */
+:root {
+  /* Matching your 3:36 version (216 seconds) */
+  --crawl-dur: 216s; 
 }
 
-// Skip on tap / key
-document.addEventListener('keydown', beginSim);
-document.addEventListener('click',   beginSim);
-document.addEventListener('touchend',beginSim);
+#crawl-stage {
+  position: fixed; inset: 0; z-index: 10;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end;
+  overflow: hidden;
+  /* Deep perspective for the classic "Star Wars" feel */
+  perspective: 500px;
+  perspective-origin: 50% 95%;
+}
 
-// Auto-advance when crawl animation ends
-document.getElementById('crawl-body').addEventListener('animationend', beginSim);
+#crawl-body {
+  width: 70%; max-width: 900px;
+  transform-origin: 50% 100%;
+  /* Starts flat and large at the bottom */
+  transform: rotateX(25deg) translateY(100vh);
+  animation: crawl var(--crawl-dur) linear forwards;
+}
 
-// ── Simulation state ──────────────────────────────────────────────
-let simDate = new Date(1943,10,8);
-let paused=false, safeMode=false, daysPerFrame=3;
-let stars=[],simStarted=false;
-let eventTotal=0, weTotal=0, bdayShown=false;
-let confettiParticles=[], confettiActive=false;
-let pulseTimer=null, starburstCount=0;
-let activeCategories=new Set(['all']);
-let userMilestones=[];
-</script>
+@keyframes crawl {
+  0% { transform: rotateX(25deg) translateY(100vh); }
+  /* Ends far in the distance */
+  100% { transform: rotateX(25deg) translateY(-220vh); }
+}
+
+.crawl-body {
+  text-align: center; /* Centered for a formal "Speech" aesthetic */
+  font-size: clamp(2rem, 4vw, 3rem); /* Starts large and legible */
+  line-height: 1.7;
+  letter-spacing: 2px;
+  color: #ffe8aa;
+  margin-bottom: 2.5em;
+  text-shadow: 0 0 15px rgba(255, 232, 170, 0.5);
+}
+</style>
+
 <script>
+// 3. Updated "Begin" function to trigger Audio and Simulation
+function beginSim() {
+  if (crawlDone) return; 
+  crawlDone = true;
 
+  // Play the hosted audio from your storage bucket
+  const audio = document.getElementById('birthday-audio');
+  if (audio) {
+    audio.play().catch(err => console.error("Audio playback failed:", err));
+  }
+
+  // Fade out the crawl stage and start the sim
+  document.getElementById('crawl-stage').style.transition = 'opacity 3s ease';
+  document.getElementById('crawl-stage').style.opacity = '0';
+  
+  setTimeout(() => {
+    document.getElementById('crawl-stage').style.display = 'none';
+    document.getElementById('cold-open').style.display = 'none';
+    document.getElementById('skip-hint').style.display = 'none';
+    document.getElementById('sim-ui').classList.add('show');
+    startSimLoop();
+  }, 3000);
+}
+</script>
+  
 const sikhCalendar = [
     { month:9,  day:8,  event:"Birthday of Rachhpal S. Atwal", personal:true },
     { month:4,  day:16, year:2026, event:"Happy Birthday Dad! \u2605 Rachhpal S. Atwal \u2605", personal:true, bday:true },
@@ -876,3 +902,49 @@ document.getElementById('cat-select').addEventListener('change',function(){
 </script>
 </body>
 </html>
+
+<audio id="birthday-audio" preload="auto">
+  <source src="https://your-bucket-url.com/eighty-three-stars-long.mp3" type="audio/mpeg">
+</audio>
+
+<style>
+/* 2. Enhanced Perspective and Scrolling Logic */
+:root {
+  /* Matching your 3:36 version (216 seconds) */
+  --crawl-dur: 216s; 
+}
+
+#crawl-stage {
+  position: fixed; inset: 0; z-index: 10;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end;
+  overflow: hidden;
+  /* Deep perspective for the classic "Star Wars" feel */
+  perspective: 500px;
+  perspective-origin: 50% 95%;
+}
+
+#crawl-body {
+  width: 70%; max-width: 900px;
+  transform-origin: 50% 100%;
+  /* Starts flat and large at the bottom */
+  transform: rotateX(25deg) translateY(100vh);
+  animation: crawl var(--crawl-dur) linear forwards;
+}
+
+@keyframes crawl {
+  0% { transform: rotateX(25deg) translateY(100vh); }
+  /* Ends far in the distance */
+  100% { transform: rotateX(25deg) translateY(-220vh); }
+}
+
+.crawl-body {
+  text-align: center; /* Centered for a formal "Speech" aesthetic */
+  font-size: clamp(2rem, 4vw, 3rem); /* Starts large and legible */
+  line-height: 1.7;
+  letter-spacing: 2px;
+  color: #ffe8aa;
+  margin-bottom: 2.5em;
+  text-shadow: 0 0 15px rgba(255, 232, 170, 0.5);
+}
+</style>
