@@ -36,16 +36,18 @@ canvas#stars{position:fixed;inset:0;z-index:0;}
   width: 75%;
   max-width: 900px;
   transform-origin: 50% 100%;
-  /* This starts the element below the horizon line */
+  /* Fixed: We start with a translation that pushes the TOP of the text 
+     completely below the screen. */
   transform: rotateX(25deg) translateY(100vh);
   animation: crawl var(--crawl-dur) linear forwards;
-  /* ADD THIS: Pushes the text down so the top (Title) appears first */
-  padding-top: 100vh; 
+  /* Ensures the simulation starfield is visible behind the text */
+  padding-bottom: 100vh; 
 }
 
 @keyframes crawl {
-  0% { transform: rotateX(25deg) translateY(0); }
-  100% { transform: rotateX(25deg) translateY(-100%); }
+  0% { transform: rotateX(25deg) translateY(100vh); }
+  /* We move the element UP until the BOTTOM of the text passes the top of the screen */
+  100% { transform: rotateX(25deg) translateY(-250vh); }
 }
 
 #cold-open{
@@ -240,20 +242,26 @@ function beginSim() {
 
   const audio = document.getElementById('birthday-audio');
   if (audio) {
-    // We use a fresh play promise to bypass the 'interaction' gate
-    audio.play().then(() => {
-        console.log("Mehr is playing...");
-    }).catch(err => {
-        console.error("CORS or Path Error. Status:", err);
-        alert("Please ensure CORS is set to allow: https://arch-pattern-backup.github.io");
+    audio.play().catch(err => {
+        // If it still fails, we alert the user so they know it's a CORS/Access issue
+        console.error("Audio Error:", err);
     });
   }
 
-  document.getElementById('crawl-stage').style.opacity = '1'; // Ensure visibility
+  // Visual Transitions
   document.getElementById('cold-open').style.opacity = '0';
   document.getElementById('skip-hint').style.display = 'none';
   
-  // Simulation UI stays hidden (opacity 0) until crawl is finished or skipped
+  // Transition to simulation after the song/crawl duration
+  setTimeout(() => {
+      document.getElementById('crawl-stage').style.transition = 'opacity 3s ease';
+      document.getElementById('crawl-stage').style.opacity = '0';
+      setTimeout(() => {
+          document.getElementById('crawl-stage').style.display = 'none';
+          document.getElementById('sim-ui').classList.add('show');
+          startSimLoop();
+      }, 3000);
+  }, 216000); // 216 seconds matching your audio
 }
 
 document.addEventListener('click', beginSim);
