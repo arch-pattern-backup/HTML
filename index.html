@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Project: Starfield 1943</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --glow: #00f2ff;
+            --bg: #020205;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--glow);
+            font-family: 'JetBrains+Mono', monospace;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        canvas {
+            position: fixed;
+            top: 0; left: 0;
+            z-index: -1;
+        }
+
+        header {
+            width: 90%;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(0, 242, 255, 0.2);
+            background: rgba(2, 2, 5, 0.8);
+        }
+
+        .odometer {
+            font-size: 5rem;
+            font-weight: 700;
+            margin: 20px 0;
+            text-shadow: 0 0 20px var(--glow);
+        }
+
+        .clock-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            width: 90%;
+            margin-top: 20px;
+        }
+
+        .city-box {
+            background: rgba(0, 242, 255, 0.05);
+            border: 1px solid rgba(0, 242, 255, 0.2);
+            padding: 15px;
+            text-align: center;
+        }
+
+        .city-name { font-size: 0.8rem; letter-spacing: 4px; margin-bottom: 10px; opacity: 0.7; }
+        .city-date { font-size: 1.1rem; margin-bottom: 5px; }
+        .city-time { font-size: 1.8rem; font-weight: 700; color: #fff; }
+
+        .stats {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            font-size: 0.7rem;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="starfield"></canvas>
+
+<header>
+    <div>STATUS: TEMPORAL SYNC ACTIVE</div>
+    <div>STARS ACCUMULATED: <span id="star-count">0</span></div>
+</header>
+
+<div class="odometer" id="year-display">1943</div>
+
+<div class="clock-container">
+    <div class="city-box">
+        <div class="city-name">SEATTLE</div>
+        <div id="seattle-date" class="city-date">-- --- ----</div>
+        <div id="seattle-time" class="city-time">--:-- --</div>
+    </div>
+    <div class="city-box">
+        <div class="city-name">BIRMINGHAM</div>
+        <div id="uk-date" class="city-date">-- --- ----</div>
+        <div id="uk-time" class="city-time">--:-- --</div>
+    </div>
+    <div class="city-box">
+        <div class="city-name">DELHI</div>
+        <div id="india-date" class="city-date">-- --- ----</div>
+        <div id="india-time" class="city-time">--:-- --</div>
+    </div>
+</div>
+
+<div class="stats">
+    VELOCITY: 1 DAY / SECOND | COORDINATES: 52.4862° N, 1.8904° W
+</div>
+
+<script>
+    const canvas = document.getElementById('starfield');
+    const ctx = canvas.getContext('2d');
+    const yearDisplay = document.getElementById('year-display');
+    const starCountDisplay = document.getElementById('star-count');
+
+    let stars = [];
+    let currentSimDate = new Date(1943, 10, 8); // Start: Nov 8, 1943
+    const endDate = new Date(); // Present
+    
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function addStar() {
+        stars.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 2,
+            opacity: Math.random()
+        });
+    }
+
+    function updateClocks(date) {
+        const timeOpts = { hour: '2-digit', minute: '2-digit', hour12: true };
+        const dateOpts = { day: '2-digit', month: 'short', year: 'numeric' };
+
+        // Seattle
+        document.getElementById('seattle-time').innerText = date.toLocaleTimeString('en-US', { ...timeOpts, timeZone: 'America/Los_Angeles' });
+        document.getElementById('seattle-date').innerText = date.toLocaleDateString('en-US', { ...dateOpts, timeZone: 'America/Los_Angeles' });
+
+        // UK
+        document.getElementById('uk-time').innerText = date.toLocaleTimeString('en-GB', { ...timeOpts, timeZone: 'Europe/London' });
+        document.getElementById('uk-date').innerText = date.toLocaleDateString('en-GB', { ...dateOpts, timeZone: 'Europe/London' });
+
+        // India
+        document.getElementById('india-time').innerText = date.toLocaleTimeString('en-IN', { ...timeOpts, timeZone: 'Asia/Kolkata' });
+        document.getElementById('india-date').innerText = date.toLocaleDateString('en-IN', { ...dateOpts, timeZone: 'Asia/Kolkata' });
+    }
+
+    function animate() {
+        ctx.fillStyle = '#020205';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        stars.forEach(star => {
+            ctx.fillStyle = `rgba(255, 255, 255, ${star.opacity})`;
+            ctx.beginPath();
+            ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        if (currentSimDate < endDate) {
+            // Increment by 1 day per animation frame for visual speed
+            // Or use setInterval for the "1 second = 1 day" request
+            currentSimDate.setDate(currentSimDate.getDate() + 1);
+            addStar();
+            
+            yearDisplay.innerText = currentSimDate.getFullYear();
+            starCountDisplay.innerText = stars.length;
+            updateClocks(currentSimDate);
+        }
+
+        requestAnimationFrame(animate);
+    }
+
+    animate();
+</script>
+</body>
+</html>
