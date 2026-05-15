@@ -94,8 +94,10 @@ canvas#stars{position:fixed;inset:0;z-index:0;}
 @keyframes crawl {
   /* Start: entire block is below the screen */
   0%   { transform: rotateX(25deg) translateY(100vh); }
-  /* End: entire block has scrolled above the screen */
-  100% { transform: rotateX(25deg) translateY(-500vh); }
+  /* End: entire block has scrolled above the screen.
+     With 2x font sizes content height is ~1400vh total,
+     so we need to travel far enough to clear it all. */
+  100% { transform: rotateX(25deg) translateY(-1400vh); }
 }
 
 .crawl-title{
