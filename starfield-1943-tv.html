@@ -24,7 +24,6 @@ canvas#stars{position:fixed;inset:0;z-index:0;}
   perspective-origin:50% 95%;
 }
 
-/* fade-to-black at top */
 #crawl-stage::before{
   content:'';position:absolute;
   top:0;left:0;right:0;height:35%;
@@ -36,17 +35,17 @@ canvas#stars{position:fixed;inset:0;z-index:0;}
   width: 75%;
   max-width: 900px;
   transform-origin: 50% 100%;
-  /* This pushes the actual text content down so the top (Title) starts at the bottom of the screen */
+  /* Pushes content down so title is the first thing up */
   padding-top: 100vh; 
-  /* We start the entire element at 0 because the padding-top is doing the work */
-  transform: rotateX(25deg) translateY(0);
+  /* Starts flat/large at the bottom */
+  transform: rotateX(25deg) translateY(100vh);
   animation: crawl var(--crawl-dur) linear forwards;
 }
 
 @keyframes crawl {
-  0% { transform: rotateX(25deg) translateY(0); }
-  /* We scroll UP until the element is completely gone from the top */
-  100% { transform: rotateX(25deg) translateY(-100%); }
+  0% { transform: rotateX(25deg) translateY(100vh); }
+  /* Deep recession into the starfield */
+  100% { transform: rotateX(25deg) translateY(-300vh); }
 }
 
 #cold-open{
@@ -81,7 +80,7 @@ canvas#stars{position:fixed;inset:0;z-index:0;}
 }
 
 .crawl-body {
-  text-align: center; /* Sam Seaborn Speech style */
+  text-align: center;
   font-size: clamp(1.8rem, 3.5vw, 2.5rem); 
   line-height: 1.8;
   letter-spacing: 2px;
@@ -139,7 +138,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
 <canvas id="stars"></canvas>
 <canvas id="confetti-canvas" style="position:fixed;inset:0;z-index:199;pointer-events:none;"></canvas>
 <div id="pulse-overlay"></div>
-<audio id="birthday-audio" preload="auto" crossorigin="anonymous">
+
+<audio id="birthday-audio" preload="auto">
   <source src="eighty-three-stars-long.mp3" type="audio/mpeg">
 </audio>
 
@@ -241,8 +241,7 @@ function beginSim() {
   const audio = document.getElementById('birthday-audio');
   if (audio) {
     audio.play().catch(err => {
-        // If it still fails, we alert the user so they know it's a CORS/Access issue
-        console.error("Audio Error:", err);
+        console.error("Audio playback error:", err);
     });
   }
 
