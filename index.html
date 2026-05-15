@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Project: Legacy 1943</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --glow: #00ffcc; /* Or use #ffcc00 for an Amber 'Sentry' look */
+            --bg: #0a0a0c;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--glow);
+            font-family: 'JetBrains+Mono', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            text-transform: uppercase;
+        }
+
+        /* Mission Control Header */
+        header {
+            position: absolute;
+            top: 20px;
+            width: 90%;
+            border-bottom: 1px solid var(--glow);
+            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            opacity: 0.7;
+        }
+
+        /* Odometer Container */
+        .odometer-wrap {
+            display: flex;
+            font-size: 8rem;
+            font-weight: 700;
+            height: 120px;
+            overflow: hidden;
+            border: 2px solid var(--glow);
+            padding: 10px 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+            background: rgba(0, 0, 0, 0.5);
+            margin-bottom: 40px;
+        }
+
+        .digit-column {
+            display: flex;
+            flex-direction: column;
+            transition: transform 3s cubic-bezier(0.45, 0.05, 0.55, 0.95);
+        }
+
+        .digit {
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Time Grid */
+        .time-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 40px;
+            width: 80%;
+            text-align: center;
+        }
+
+        .clock-label {
+            font-size: 0.7rem;
+            margin-bottom: 10px;
+            letter-spacing: 3px;
+            opacity: 0.6;
+        }
+
+        .clock-value {
+            font-size: 1.5rem;
+            text-shadow: 0 0 10px var(--glow);
+        }
+
+        /* Subtle scanline effect */
+        body::after {
+            content: " ";
+            position: fixed;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div>Sector: Punjab / Birmingham / Seattle</div>
+        <div>Subject: Rachhpal S. Atwal // Born: 1943</div>
+    </header>
+
+    <div class="odometer-wrap" id="odo">
+        </div>
+
+    <div class="time-grid">
+        <div>
+            <div class="clock-label">Seattle (PDT)</div>
+            <div class="clock-value" id="seattle">--:--:--</div>
+        </div>
+        <div>
+            <div class="clock-label">Birmingham (BST)</div>
+            <div class="clock-value" id="uk">--:--:--</div>
+        </div>
+        <div>
+            <div class="clock-label">Delhi (IST)</div>
+            <div class="clock-value" id="india">--:--:--</div>
+        </div>
+    </div>
+
+    <script>
+        // Initialization
+        const startYear = 1943;
+        const endYear = 2026;
+        const odo = document.getElementById('odo');
+
+        // Create 4 columns for the year
+        function createOdometer() {
+            for (let i = 0; i < 4; i++) {
+                const col = document.createElement('div');
+                col.className = 'digit-column';
+                col.id = `col-${i}`;
+                for (let n = 0; n <= 9; n++) {
+                    const d = document.createElement('div');
+                    d.className = 'digit';
+                    d.innerText = n;
+                    col.appendChild(d);
+                }
+                odo.appendChild(col);
+            }
+        }
+
+        function updateOdometer(year) {
+            const digits = year.toString().split('');
+            digits.forEach((d, i) => {
+                const col = document.getElementById(`col-${i}`);
+                col.style.transform = `translateY(-${d * 120}px)`;
+            });
+        }
+
+        function updateClocks() {
+            const now = new Date();
+            const opts = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false };
+            document.getElementById('seattle').innerText = now.toLocaleTimeString('en-US', { ...opts, timeZone: 'America/Los_Angeles' });
+            document.getElementById('uk').innerText = now.toLocaleTimeString('en-GB', { ...opts, timeZone: 'Europe/London' });
+            document.getElementById('india').innerText = now.toLocaleTimeString('en-IN', { ...opts, timeZone: 'Asia/Kolkata' });
+        }
+
+        createOdometer();
+        setInterval(updateClocks, 1000);
+        updateClocks();
+
+        // Spin the year after a small delay
+        setTimeout(() => updateOdometer(endYear), 500);
+    </script>
+</body>
+</html>
