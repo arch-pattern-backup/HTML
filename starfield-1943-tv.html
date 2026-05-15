@@ -466,14 +466,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
   <button id="bday-close" onclick="closeBday()">CONTINUE THE JOURNEY &#10132;</button>
 </div>
 
-<audio id="birthday-audio" preload="auto">
-  <source src="https://your-bucket-url.com/eighty-three-stars-long.mp3" type="audio/mpeg">
+<audio id="birthday-audio" preload="auto" crossorigin="anonymous">
+  <source src="https://a6b170c693aff39bc16c1f20fce876b4.r2.cloudflarestorage.com/audio-family/hot/eighty-three-stars-long.mp3" type="audio/mpeg">
 </audio>
 
 <style>
-/* 2. Enhanced Perspective and Scrolling Logic */
+/* Synchronized with your 216s (3:36) version */
 :root {
-  /* Matching your 3:36 version (216 seconds) */
   --crawl-dur: 216s; 
 }
 
@@ -482,59 +481,53 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
   display: flex; flex-direction: column;
   align-items: center; justify-content: flex-end;
   overflow: hidden;
-  /* Deep perspective for the classic "Star Wars" feel */
   perspective: 500px;
   perspective-origin: 50% 95%;
 }
 
 #crawl-body {
-  width: 70%; max-width: 900px;
+  width: 75%; max-width: 900px;
   transform-origin: 50% 100%;
-  /* Starts flat and large at the bottom */
+  /* Starts large and flat at the very bottom */
   transform: rotateX(25deg) translateY(100vh);
   animation: crawl var(--crawl-dur) linear forwards;
 }
 
 @keyframes crawl {
   0% { transform: rotateX(25deg) translateY(100vh); }
-  /* Ends far in the distance */
-  100% { transform: rotateX(25deg) translateY(-220vh); }
+  /* Deep recession into the starfield */
+  100% { transform: rotateX(25deg) translateY(-280vh); }
 }
 
 .crawl-body {
-  text-align: center; /* Centered for a formal "Speech" aesthetic */
-  font-size: clamp(2rem, 4vw, 3rem); /* Starts large and legible */
-  line-height: 1.7;
-  letter-spacing: 2px;
+  text-align: center;
+  font-size: clamp(2.2rem, 5vw, 3.2rem); /* Enhanced for mobile readability */
+  line-height: 1.8;
   color: #ffe8aa;
-  margin-bottom: 2.5em;
-  text-shadow: 0 0 15px rgba(255, 232, 170, 0.5);
+  margin-bottom: 3em;
+  text-shadow: 0 0 20px rgba(255, 232, 170, 0.6);
 }
 </style>
 
 <script>
-// 3. Updated "Begin" function to trigger Audio and Simulation
 function beginSim() {
   if (crawlDone) return; 
   crawlDone = true;
 
-  // Play the hosted audio from your storage bucket
   const audio = document.getElementById('birthday-audio');
   if (audio) {
-    audio.play().catch(err => console.error("Audio playback failed:", err));
+    // Volume fade-in could be added here if desired
+    audio.play().catch(err => {
+      console.warn("Autoplay prevented or R2 CORS issue:", err);
+    });
   }
 
-  // Fade out the crawl stage and start the sim
-  document.getElementById('crawl-stage').style.transition = 'opacity 3s ease';
-  document.getElementById('crawl-stage').style.opacity = '0';
+  // Visual transition to simulation
+  const stage = document.getElementById('crawl-stage');
+  stage.style.transition = 'opacity 4s ease';
   
-  setTimeout(() => {
-    document.getElementById('crawl-stage').style.display = 'none';
-    document.getElementById('cold-open').style.display = 'none';
-    document.getElementById('skip-hint').style.display = 'none';
-    document.getElementById('sim-ui').classList.add('show');
-    startSimLoop();
-  }, 3000);
+  // Optional: Auto-transition when audio ends or crawl finishes
+  // For now, it stays visible for the full 3:36 unless he taps again
 }
 </script>
   
