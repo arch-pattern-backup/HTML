@@ -6,15 +6,56 @@
 <title>Starfield 1943 — For Dad</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;700&display=swap" rel="stylesheet">
 <style>
-:root{--glow:#00f2ff;--gold:#ffc94a;--bg:#020205; --crawl-dur: 216s;}
+:root{--glow:#00f2ff;--gold:#ffc94a;--bg:#020205;--crawl-dur:216s;}
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);
   font-family:'JetBrains Mono',monospace;color:#fff;}
 canvas#stars{position:fixed;inset:0;z-index:0;}
 
-/* ═══════════════════════════════════════════════
-   CRAWL STAGE - FINAL MISSION CONTROL FIX
-═══════════════════════════════════════════════ */
+/* ═══════════════════════════════
+   TAP PROMPT — replaces cold-open
+═══════════════════════════════ */
+#tap-prompt {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  background: #000;
+  cursor: pointer;
+  /* stays fully visible until tapped */
+}
+#tap-prompt .tp-pre {
+  font-size: clamp(.75rem, 2vw, 1rem);
+  letter-spacing: 5px;
+  color: #4488aa;
+  text-align: center;
+  line-height: 2.6;
+  font-style: italic;
+  margin-bottom: 3rem;
+}
+#tap-prompt .tp-btn {
+  font-size: clamp(.7rem, 1.8vw, .95rem);
+  letter-spacing: 6px;
+  color: var(--gold);
+  border: 1px solid rgba(255,180,0,.45);
+  padding: 18px 40px;
+  animation: tpPulse 2.2s ease-in-out infinite;
+}
+@keyframes tpPulse {
+  0%,100% { box-shadow: 0 0 12px rgba(255,180,0,.2); opacity:.7; }
+  50%      { box-shadow: 0 0 32px rgba(255,180,0,.55); opacity:1; }
+}
+/* fade-out class applied on tap */
+#tap-prompt.fade-out {
+  transition: opacity 1.8s ease;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════
+   CRAWL STAGE
+   animation is PAUSED by default;
+   JS removes the paused class on tap
+═══════════════════════════════ */
 #crawl-stage {
   position: fixed; inset: 0; z-index: 10;
   display: flex; flex-direction: column;
@@ -22,50 +63,47 @@ canvas#stars{position:fixed;inset:0;z-index:0;}
   overflow: hidden;
   perspective: 500px;
   perspective-origin: 50% 95%;
+  /* hidden until tap */
+  opacity: 0;
+}
+#crawl-stage.running {
+  opacity: 1;
+  transition: opacity .5s ease;
 }
 
 #crawl-body {
   width: 75%;
   max-width: 900px;
   transform-origin: 50% 100%;
-  /* WE REMOVE the translateY here entirely. 
-     The animation 0% frame will now handle the starting point. */
-  transform: rotateX(25deg); 
+  padding-top: 100vh;
+
+  /*
+    KEY FIX:
+    - animation exists but is PAUSED
+    - we want the title to be just below the
+      bottom edge of the perspective plane at t=0,
+      then crest the horizon at ~2s.
+    - translateY(0) = title sitting below screen.
+    - We want ~2s before the title hits the horizon,
+      so we use animation-delay: -0s (start from 0%)
+      and let the crawl-dur control the full scroll.
+    - animation-play-state: paused until JS fires.
+  */
+  transform: rotateX(25deg) translateY(0);
   animation: crawl var(--crawl-dur) linear forwards;
-  /* This pushes the text down 100% of the viewport height 
-     so the title starts off-screen at the bottom. */
-  padding-top: 100vh; 
+  animation-play-state: paused;
+}
+
+/* Once JS adds .running to #crawl-stage, we also
+   need the body to start. We target it via the
+   parent class so no extra JS is needed. */
+#crawl-stage.running #crawl-body {
+  animation-play-state: running;
 }
 
 @keyframes crawl {
-  0% { 
-    /* Start at the bottom of the perspective plane */
-    transform: rotateX(25deg) translateY(0); 
-  }
-  100% { 
-    /* Move UP until the entire padded block is gone from the top */
-    transform: rotateX(25deg) translateY(-400vh); 
-  }
-}
-#cold-open{
-  position:fixed;inset:0;z-index:30;
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  background:black;
-  animation:coldFade 5s ease forwards;
-  animation-delay:0.5s;
-  opacity:1;
-}
-@keyframes coldFade{
-  0%  {opacity:1;}
-  60% {opacity:1;}
-  100%{opacity:0;pointer-events:none;}
-}
-#cold-open p{
-  font-size:clamp(.9rem,2vw,1.4rem);
-  letter-spacing:4px;color:#4488aa;
-  text-align:center;line-height:2.4;
-  font-style:italic;
+  0%   { transform: rotateX(25deg) translateY(0); }
+  100% { transform: rotateX(25deg) translateY(-400vh); }
 }
 
 .crawl-title{
@@ -77,30 +115,26 @@ canvas#stars{position:fixed;inset:0;z-index:0;}
   margin-bottom:2.4em;
   line-height:1.2;
 }
-
 .crawl-body {
   text-align: center;
-  font-size: clamp(1.8rem, 3.5vw, 2.5rem); 
+  font-size: clamp(1.8rem, 3.5vw, 2.5rem);
   line-height: 1.8;
   letter-spacing: 2px;
   color: #ffe8aa;
   margin-bottom: 2.5em;
   text-shadow: 0 0 15px rgba(255, 232, 170, 0.5);
 }
-
 .crawl-rule{border:none;border-top:1px solid rgba(255,180,0,.3);margin:2.2em 0;}
 .mehr-word{text-align:center;font-size:clamp(2.5rem,6vw,4rem);font-weight:700;letter-spacing:12px;color:#ffffff;text-shadow:0 0 30px rgba(255,255,200,.8);margin:1.2em 0 .8em;}
 .mehr-lines{text-align:center;font-size:clamp(1.4rem,3vw,2rem);line-height:2.2;letter-spacing:3px;color:#d0eeff;margin-bottom:2em;}
 .day-count{text-align:center;font-size:clamp(1.8rem,4vw,3.5rem);font-weight:700;letter-spacing:6px;color:#ffffff;text-shadow:0 0 20px var(--glow);margin:.6em 0 .3em;}
 .year-count{text-align:center;font-size:clamp(1.2rem,2.8vw,2.2rem);letter-spacing:5px;color:#00e8ff;margin-bottom:2.4em;}
 .sign-off{text-align:center;font-size:clamp(1.5rem,3.5vw,2.8rem);font-weight:700;letter-spacing:6px;color:var(--gold);text-shadow:0 0 20px rgba(255,180,0,.7);line-height:2;margin-top:1em;}
-.sign-name{text-align:center;font-size:clamp(1.2rem,2.5vw,1.8rem);letter-spacing:5px;color:#fff;font-style:italic;margin-top:.6em;}
-#skip-hint{position:fixed;bottom:24px;right:32px;z-index:40;font-size:.65rem;letter-spacing:3px;color:rgba(255,255,255,.25);animation:blink 2.5s ease-in-out infinite;pointer-events:none;}
-@keyframes blink{0%,100%{opacity:.2;}50%{opacity:.6;}}
+.sign-name{text-align:center;font-size:clamp(1.2rem,2.5vw,1.8rem);letter-spacing:5px;color:#fff;font-style:italic;margin-top:.6em;padding-bottom:40vh;}
 
-/* ═══════════════════════════════════════════════
+/* ═══════════════════════════════
    SIMULATION UI
-═══════════════════════════════════════════════ */
+═══════════════════════════════ */
 #sim-ui{position:fixed;inset:0;z-index:10;opacity:0;pointer-events:none;transition:opacity 2s ease;display:flex;flex-direction:column;align-items:center;overflow-y:auto;padding-bottom:40px;}
 #sim-ui.show{opacity:1;pointer-events:all;}
 .sim-header{width:100%;background:rgba(0,0,0,.92);border-bottom:2px solid rgba(0,242,255,.25);padding:14px 5%;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;position:sticky;top:0;z-index:50;}
@@ -120,7 +154,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
 .city-time{font-size:clamp(1.6rem,3vw,2.4rem);font-weight:700;color:#fff;}
 .panels{display:flex;gap:16px;width:90%;flex-wrap:wrap;margin-top:4px;}
 .panel{flex:1;min-width:280px;background:rgba(0,0,0,.82);border:2px solid rgba(0,242,255,.3);}
-.panel.gold-p{border-color: rgba(255,180,0,.45);}
+.panel.gold-p{border-color:rgba(255,180,0,.45);}
 .ph{padding:12px 18px;font-size:clamp(.6rem,1vw,.8rem);letter-spacing:4px;display:flex;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.1);}
 .ev-list{list-style:none;max-height:240px;overflow-y:auto;}
 .ev-list li{display:flex;gap:10px;padding:11px 18px;border-bottom:1px solid rgba(255,255,255,.06);}
@@ -128,6 +162,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
 #bday-splash.show{display:flex;}
 .bday-msg{font-size:clamp(2.5rem,7vw,6rem);font-weight:700;color:var(--gold);letter-spacing:8px;animation:bp 2s ease-in-out infinite alternate;}
 @keyframes bp{from{text-shadow:0 0 40px rgba(255,180,0,.7);}to{text-shadow:0 0 90px rgba(255,255,100,.95);}}
+#bday-close{font-family:'JetBrains Mono',monospace;font-size:clamp(.7rem,1.5vw,.9rem);letter-spacing:4px;padding:14px 32px;cursor:pointer;border:2px solid rgba(255,180,0,.5);background:transparent;color:var(--gold);margin-top:2rem;}
 #pulse-overlay{position:fixed;inset:0;pointer-events:none;z-index:98;opacity:0;background:radial-gradient(ellipse at center,rgba(255,165,0,.15) 0%,transparent 68%);transition:opacity 1.4s ease-out;}
 #pulse-overlay.pulse-active{opacity:1;}
 </style>
@@ -142,8 +177,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
   <source src="eighty-three-stars-long.mp3" type="audio/mpeg">
 </audio>
 
-<div id="cold-open"><p>A long time ago,<br>in a land far, far away&hellip;</p></div>
+<!-- TAP PROMPT — replaces the old cold-open + skip-hint -->
+<div id="tap-prompt">
+  <p class="tp-pre">A long time ago,<br>in a land far, far away&hellip;</p>
+  <div class="tp-btn">&#9654;&nbsp;&nbsp;TAP TO BEGIN</div>
+</div>
 
+<!-- CRAWL — hidden + paused until tap -->
 <div id="crawl-stage">
   <div id="crawl-body">
     <div class="crawl-title">STARFIELD<br>1943</div>
@@ -168,8 +208,6 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
     <div class="sign-name">&mdash; Ran</div>
   </div>
 </div>
-
-<div id="skip-hint">TAP TO BEGIN &nbsp;&#9654;</div>
 
 <div id="sim-ui">
   <div class="sim-header">
@@ -206,88 +244,151 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:22px;heigh
 const BORN = new Date(1943,10,8);
 const endDate = new Date();
 let simStarted = false;
-let crawlDone = false;
 let simDate = new Date(1943,10,8);
-let paused=false, safeMode=false, daysPerFrame=3;
-let stars=[], eventTotal=0, weTotal=0, bdayShown=false;
-let starburstCount=0;
+let paused = false, safeMode = false, daysPerFrame = 3;
+let stars = [], eventTotal = 0, weTotal = 0;
+let crawlStarted = false;
 
 const sikhCalendar = [
-    { month:9,  day:8,  event:"Birthday of Rachhpal S. Atwal", personal:true },
-    { month:4,  day:16, year:2026, event:"Happy Birthday Dad! ★ Rachhpal S. Atwal ★", personal:true, bday:true },
-    { month:0,  day:5,  event:"Parkash Guru Gobind Singh Ji" },
-    { month:3,  day:14, event:"Vaisakhi — Birth of the Khalsa" },
-    { month:10, day:24, event:"Gurpurab Guru Nanak Dev Ji" },
-    { month:9,  day:20, event:"Diwali / Bandi Chhor Divas" },
-    { month:7,  day:1,  event:"First Parkash Guru Granth Sahib Ji" }
+  { month:9,  day:8,  event:"Birthday of Rachhpal S. Atwal", personal:true },
+  { month:4,  day:16, year:2026, event:"Happy Birthday Dad! ★ Rachhpal S. Atwal ★", personal:true, bday:true },
+  { month:0,  day:5,  event:"Parkash Guru Gobind Singh Ji" },
+  { month:3,  day:14, event:"Vaisakhi — Birth of the Khalsa" },
+  { month:10, day:24, event:"Gurpurab Guru Nanak Dev Ji" },
+  { month:9,  day:20, event:"Diwali / Bandi Chhor Divas" },
+  { month:7,  day:1,  event:"First Parkash Guru Granth Sahib Ji" }
 ];
 
 const worldEvents = [
-    { y:1945,m:8, d:15, t:"WW2 ends" },
-    { y:1947,m:8, d:15, t:"India gains independence" },
-    { y:1969,m:7, d:21, t:"Apollo 11 Moon Landing" },
-    { y:1977,m:5, d:25, t:"Star Wars released" },
-    { y:1989,m:11,d:9,  t:"Berlin Wall falls" }
+  { y:1945,m:8, d:15, t:"WW2 ends" },
+  { y:1947,m:8, d:15, t:"India gains independence" },
+  { y:1969,m:7, d:21, t:"Apollo 11 Moon Landing" },
+  { y:1977,m:5, d:25, t:"Star Wars released" },
+  { y:1989,m:11,d:9,  t:"Berlin Wall falls" }
 ];
 
 // ── UTILITIES ─────────────────────────────────────────────────────
 function setText(id,v){ const el=document.getElementById(id); if(el) el.innerText=v; }
 
-function beginSim() {
-  if (crawlDone) return; 
-  crawlDone = true;
+// ── TAP TO BEGIN ──────────────────────────────────────────────────
+/*
+  The crawl animation is 216s total (matching --crawl-dur).
+  We want the STARFIELD 1943 title to crest the horizon at ~2s.
 
+  At t=0 the crawl-body sits at translateY(0) with padding-top:100vh,
+  meaning the title's top edge is exactly at the bottom of the screen.
+
+  The animation moves the body from translateY(0) to translateY(-400vh)
+  over 216s — that's 400vh / 216s ≈ 1.85vh per second.
+
+  The title needs to travel ~100vh to reach the top of the screen
+  (the "horizon" in perspective). That takes 100/1.85 ≈ 54s, which
+  is too slow for a 2s crest.
+
+  FIX: We use animation-delay with a NEGATIVE value to seek forward
+  in the animation timeline, so the title starts partway up and
+  crests at ~2s after tap.
+
+  Target: title crests horizon at t = 2s after tap.
+  Title height ≈ 2 * clamp(2.5rem,6vw,4.5rem) lines + margin
+  On mobile ~120px. Horizon is at perspective-origin 95% = ~95vh.
+
+  We want the bottom of the title to be at 95vh at t=2s.
+  Working backwards: we need to seek the animation to the point
+  where the title is ~1 title-height below 95vh, i.e. ~(95vh + 120px)
+  from the top = basically right at the very bottom edge.
+
+  Simplest approach: use a large negative delay to pre-scroll so
+  that at the moment of tap, the title is just off the bottom, and
+  it takes exactly 2s to crest.
+
+  The crawl moves 400vh in 216s → rate = 400/216 vh/s.
+  Distance to travel for title to crest from just-off-bottom ≈ 2vh
+  (the title is in perspective so it appears to rise from the base).
+  Time for 2vh = 2 / (400/216) = 2 * 216/400 = 1.08s ≈ 1s.
+
+  So no pre-seek needed — the default start position IS near the
+  bottom. We just need the song and the crawl to start together.
+
+  The song's first audible note: we'll use a 0.3s audio offset
+  to account for mp3 decode latency on mobile.
+*/
+
+function beginExperience() {
+  if (crawlStarted) return;
+  crawlStarted = true;
+
+  // 1. Fade out tap prompt
+  const prompt = document.getElementById('tap-prompt');
+  prompt.classList.add('fade-out');
+  setTimeout(() => { prompt.style.display = 'none'; }, 1800);
+
+  // 2. Start audio immediately (this gesture unlocks iOS audio)
   const audio = document.getElementById('birthday-audio');
-  if (audio) {
-    audio.play().catch(err => {
-        console.error("Audio playback error:", err);
+  audio.currentTime = 0;
+  const playPromise = audio.play();
+  if (playPromise !== undefined) {
+    playPromise.catch(() => {
+      // Fallback: try muted then unmute
+      audio.muted = true;
+      audio.play().then(() => { audio.muted = false; }).catch(() => {});
     });
   }
 
-  // Visual Transitions
-  document.getElementById('cold-open').style.opacity = '0';
-  document.getElementById('skip-hint').style.display = 'none';
-  
-  // Transition to simulation after the song/crawl duration
+  // 3. Show crawl stage and start animation after a brief beat
+  //    (matches the ~0.5s gap before first note on many songs)
+  //    Adjust this delay to taste once you test with the actual MP3.
+  const FIRST_NOTE_DELAY_MS = 500; // ← tune this to your song's intro
+
   setTimeout(() => {
-      document.getElementById('crawl-stage').style.transition = 'opacity 3s ease';
-      document.getElementById('crawl-stage').style.opacity = '0';
-      setTimeout(() => {
-          document.getElementById('crawl-stage').style.display = 'none';
-          document.getElementById('sim-ui').classList.add('show');
-          startSimLoop();
-      }, 3000);
-  }, 216000); // 216 seconds matching your audio
+    const stage = document.getElementById('crawl-stage');
+    stage.classList.add('running'); // triggers CSS opacity + animation
+  }, FIRST_NOTE_DELAY_MS);
+
+  // 4. After full crawl duration, transition to simulation
+  setTimeout(() => {
+    const stage = document.getElementById('crawl-stage');
+    stage.style.transition = 'opacity 3s ease';
+    stage.style.opacity = '0';
+    setTimeout(() => {
+      stage.style.display = 'none';
+      document.getElementById('sim-ui').classList.add('show');
+      startSimLoop();
+    }, 3000);
+  }, 216000 + FIRST_NOTE_DELAY_MS);
 }
 
-document.addEventListener('click', beginSim);
-document.addEventListener('keydown', beginSim);
+document.getElementById('tap-prompt').addEventListener('click', beginExperience);
+document.getElementById('tap-prompt').addEventListener('touchend', function(e){
+  e.preventDefault(); // stop ghost click on iOS
+  beginExperience();
+});
 
 // ── CLOCKS & EVENTS ───────────────────────────────────────────────
 function updateClocks(date) {
-    const t={hour:'2-digit',minute:'2-digit',hour12:true};
-    const d={day:'2-digit',month:'short',year:'numeric'};
-    setText('seattle-time', date.toLocaleTimeString('en-US',{...t,timeZone:'America/Los_Angeles'}));
-    setText('seattle-date', date.toLocaleDateString('en-US',{...d,timeZone:'America/Los_Angeles'}));
-    setText('uk-time',      date.toLocaleTimeString('en-GB',{...t,timeZone:'Europe/London'}));
-    setText('uk-date',      date.toLocaleDateString('en-GB',{...d,timeZone:'Europe/London'}));
-    setText('india-time',   date.toLocaleTimeString('en-IN',{...t,timeZone:'Asia/Kolkata'}));
-    setText('india-date',   date.toLocaleDateString('en-IN',{...d,timeZone:'Asia/Kolkata'}));
+  const t={hour:'2-digit',minute:'2-digit',hour12:true};
+  const d={day:'2-digit',month:'short',year:'numeric'};
+  setText('seattle-time', date.toLocaleTimeString('en-US',{...t,timeZone:'America/Los_Angeles'}));
+  setText('seattle-date', date.toLocaleDateString('en-US',{...d,timeZone:'America/Los_Angeles'}));
+  setText('uk-time',      date.toLocaleTimeString('en-GB',{...t,timeZone:'Europe/London'}));
+  setText('uk-date',      date.toLocaleDateString('en-GB',{...d,timeZone:'Europe/London'}));
+  setText('india-time',   date.toLocaleTimeString('en-IN',{...t,timeZone:'Asia/Kolkata'}));
+  setText('india-date',   date.toLocaleDateString('en-IN',{...d,timeZone:'Asia/Kolkata'}));
 }
 
 function checkEvents(date) {
-    const m=date.getMonth(), d=date.getDate(), y=date.getFullYear();
-    sikhCalendar.filter(e=>e.month===m && e.day===d && (!e.year||e.year===y)).forEach(evt=>{
-        const li=document.createElement('li'); li.innerText=evt.event;
-        document.getElementById('event-list').prepend(li);
-        eventTotal++; setText('event-count', eventTotal);
-        if(evt.bday) { paused=true; document.getElementById('bday-splash').classList.add('show'); }
-    });
-    worldEvents.filter(e=>e.y===y && e.m-1===m && e.d===d).forEach(evt=>{
-        const li=document.createElement('li'); li.innerText=evt.t;
-        document.getElementById('world-list').prepend(li);
-        weTotal++; setText('we-count', weTotal);
-    });
+  const m=date.getMonth(), d=date.getDate(), y=date.getFullYear();
+  sikhCalendar.filter(e=>e.month===m && e.day===d && (!e.year||e.year===y)).forEach(evt=>{
+    const li=document.createElement('li'); li.innerText=evt.event;
+    document.getElementById('event-list').prepend(li);
+    eventTotal++; setText('event-count',eventTotal);
+    if(evt.bday){ paused=true; document.getElementById('bday-splash').classList.add('show'); }
+  });
+  worldEvents.filter(e=>e.y===y && e.m-1===m && e.d===d).forEach(evt=>{
+    const li=document.createElement('li'); li.innerText=evt.t;
+    document.getElementById('world-list').prepend(li);
+    weTotal++; setText('we-count',weTotal);
+  });
 }
 
 function closeBday(){ document.getElementById('bday-splash').classList.remove('show'); paused=false; }
@@ -298,12 +399,21 @@ const ctx    = canvas.getContext('2d');
 function resize(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; }
 window.addEventListener('resize',resize); resize();
 
+// Background starfield (always running)
 (function bgStars(){
   const pts=[];
-  for(let i=0;i<260;i++) pts.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,r:Math.random()*1.4,o:Math.random()});
+  for(let i=0;i<260;i++) pts.push({
+    x:Math.random()*canvas.width,
+    y:Math.random()*canvas.height,
+    r:Math.random()*1.4,
+    o:Math.random()
+  });
   function draw(){
     ctx.fillStyle='#020205'; ctx.fillRect(0,0,canvas.width,canvas.height);
-    pts.forEach(p=>{ ctx.fillStyle=`rgba(255,255,255,${p.o})`; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); });
+    pts.forEach(p=>{
+      ctx.fillStyle=`rgba(255,255,255,${p.o})`;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+    });
     if(!simStarted) requestAnimationFrame(draw);
   }
   draw();
@@ -313,7 +423,10 @@ function startSimLoop(){
   simStarted=true;
   function loop(){
     ctx.fillStyle='#020205'; ctx.fillRect(0,0,canvas.width,canvas.height);
-    stars.forEach(s=>{ ctx.fillStyle=`rgba(255,255,255,${s.o})`; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill(); });
+    stars.forEach(s=>{
+      ctx.fillStyle=`rgba(255,255,255,${s.o})`;
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
+    });
     if(!paused && simDate<endDate){
       for(let i=0;i<daysPerFrame;i++){
         if(simDate>=endDate) break;
@@ -329,7 +442,14 @@ function startSimLoop(){
   loop();
 }
 
-document.getElementById('speed-slider').addEventListener('input',function(){ daysPerFrame=parseInt(this.value); });
+document.getElementById('speed-slider').addEventListener('input',function(){
+  daysPerFrame=parseInt(this.value);
+  setText('speed-val', this.value+' DAYS/FR');
+});
+document.getElementById('pause-btn').addEventListener('click',function(){
+  paused=!paused;
+  this.innerText = paused ? '▶ RESUME' : '⏸ PAUSE';
+});
 </script>
 </body>
 </html>
