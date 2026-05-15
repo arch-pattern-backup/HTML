@@ -1,0 +1,16 @@
+Suggested hosting: GitHub Pages
+
+Why GitHub Pages is a good fit:
+- Free and simple for a static site like this.
+- index.html loads automatically.
+- Works well on phone, tablet, laptop, and TV browser.
+- You can add a custom domain later if you want.
+
+Possible alternatives:
+- Netlify: also excellent, easier drag-and-drop deployment.
+- Cloudflare Pages: fast and free, good if you already use Cloudflare.
+
+For your Dad:
+- Start with the site link.
+- index.html helps him choose the right version.
+- Dad Mode is the safest first choice.
