@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "patternfoundry-applib"
+version = "0.1.6"
+description = "Shared application utilities for patternfoundry services"
+requires-python = ">=3.10"
+dependencies = [
+    "sqlmodel",
+    "boto3",
+    "httpx",
+    "pydantic",
+    "prometheus-client",
+    "python-json-logger",
+    "opentelemetry-api",
+    "pytest"
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app_lib"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
