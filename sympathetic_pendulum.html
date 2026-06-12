@@ -165,7 +165,7 @@
 
       <div id="urlInputGroup" style="display:none;">
         <label for="audioUrl">Audio Target Track URL</label>
-        <input type="text" id="audioUrl" value="https://audio.patternfoundry.systems/hot/eighty-three-stars-long.mp3" onchange="loadAudioTrack()">
+        <input type="text" id="audioUrl" value="https://audio.patternfoundry.systems/hot/ThisIsWhatTheArchitectureOfMyNeedFeelsLike.opus" onchange="loadAudioTrack()">
       </div>
 
       <div>
@@ -241,8 +241,7 @@ let audioCtx = null;
 let analyser = null;
 let audioStream = null;
 let audioBuffer = null;
-let audioSourceNode = null;
-let audioEl = null;
+let activeSources = [];
 
 // Mathematical Constants & Windows
 const HISTORY_LIMIT = 600;
@@ -337,8 +336,12 @@ function escapeHTML(str) {
 
 // --- Audio Core Pipelines ---
 async function initializeAudioPipeline() {
-  if (audioCtx) return true;
-  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx && audioCtx.state === 'suspended') {
+    await audioCtx.resume();
+  }
+  if (analyser) return true; // Stream structures are already intact
+  
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   
   if (activeMode === 'mic') {
     try {
@@ -366,18 +369,22 @@ async function initializeAudioPipeline() {
 async function loadAudioTrack() {
   const url = document.getElementById('audioUrl').value.trim();
   if (!url) return false;
-  updateStatusDisplay("Fetching target audio file...");
+  updateStatusDisplay("Fetching target audio asset...");
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
     const res = await fetch(url);
     const bufferData = await res.arrayBuffer();
     audioBuffer = await audioCtx.decodeAudioData(bufferData);
     
-    setupBufferNodes(url);
+    // Setup dedicated analyzer node specifically for monitoring memory buffer nodes
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+    analyser.smoothingTimeConstant = 0.1;
     
     document.getElementById('engineMode').className = "mode-indicator mode-audio";
-    document.getElementById('engineMode').textContent = "File Stream";
-    updateStatusDisplay("Audio asset mapped successfully.");
+    document.getElementById('engineMode').textContent = "Buffer Stream";
+    updateStatusDisplay("Audio asset decoded into memory substrate.");
     return true;
   } catch (err) {
     updateStatusDisplay(`Network audio fault: ${err.message}`, true);
@@ -385,19 +392,29 @@ async function loadAudioTrack() {
   }
 }
 
-function setupBufferNodes(url) {
-  if (audioEl) { audioEl.pause(); audioEl.src = ""; }
-  audioEl = new Audio();
-  audioEl.crossOrigin = "anonymous";
-  audioEl.src = url;
-  audioEl.loop = true;
+function playStretchedSentence(targetDuration) {
+  if (!audioCtx || !audioBuffer || !analyser) return;
 
-  audioSourceNode = audioCtx.createMediaElementSource(audioEl);
-  analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 512;
-  analyser.smoothingTimeConstant = 0.1;
-  audioSourceNode.connect(analyser);
+  const source = audioCtx.createBufferSource();
+  source.buffer = audioBuffer;
+
+  const rawDuration = audioBuffer.duration;
+  const targetRate = rawDuration / targetDuration;
+  
+  source.playbackRate.value = Math.max(0.20, Math.min(4.0, targetRate));
+
+  if ('preservesPitch' in source) {
+    source.preservesPitch = true;
+  } else if ('mozPreservesPitch' in source) {
+    source.mozPreservesPitch = true;
+  }
+
+  // Connect buffer through the analyser node so the variance graphics sync live
+  source.connect(analyser);
   analyser.connect(audioCtx.destination);
+  
+  source.start(0);
+  activeSources.push(source);
 }
 
 function shutdownAudioPipeline() {
@@ -406,9 +423,12 @@ function shutdownAudioPipeline() {
     audioStream.getTracks().forEach(track => track.stop());
     audioStream = null;
   }
-  if (audioEl) { audioEl.pause(); audioEl.src = ""; }
-  if (audioCtx) { audioCtx.close(); audioCtx = null; }
+  if (audioCtx) {
+    audioCtx.close().catch(() => {});
+    audioCtx = null;
+  }
   analyser = null;
+  audioBuffer = null;
   document.getElementById('engineMode').className = "mode-indicator mode-fallback";
   document.getElementById('engineMode').textContent = "Off";
 }
@@ -427,8 +447,6 @@ async function toggleSystem() {
     document.getElementById('btnLabel').textContent = "Pause Substrate";
     updateStatusDisplay("Substrate online and processing.");
     
-    if (audioEl && activeMode === 'url') audioEl.play();
-    
     lastFrameTime = null;
     executeScriptSequence();
     rafId = requestAnimationFrame(systemLoop);
@@ -437,7 +455,6 @@ async function toggleSystem() {
     btn.classList.remove('primary');
     document.getElementById('btnIcon').innerHTML = "&#9658;";
     document.getElementById('btnLabel').textContent = "Breathe";
-    if (audioEl) audioEl.pause();
     stopScaffoldingTimers();
     updateStatusDisplay("Substrate suspended.");
   }
@@ -479,19 +496,14 @@ function runVarianceAnalysis() {
 function systemLoop(timestamp) {
   if (!running) return;
   
-  // 1. Safe Time Delta Integration
-  if (lastFrameTime === null) {
-    lastFrameTime = timestamp;
-  }
+  if (lastFrameTime === null) lastFrameTime = timestamp;
   let dt = timestamp - lastFrameTime;
   lastFrameTime = timestamp;
 
-  // If tab was inactive, or if it's the first tick, force a stable 60Hz frame step
   if (dt > 100 || dt <= 0) {
     dt = 16.66; 
   }
 
-  // 2. Live Progress Bar UI Rendering Tracker
   if (currentActiveLineIndex !== -1) {
     const elapsedLineTime = timestamp - lineStartTimestamp;
     const progressPercent = Math.min(100, (elapsedLineTime / (currentLineDuration * 1000)) * 100);
@@ -501,7 +513,6 @@ function systemLoop(timestamp) {
     }
   }
 
-  // 3. Signal Capture & Filter Evaluation
   let targetCouplingSignal = 0;
   if (activeMode !== 'none' && analyser) {
     targetCouplingSignal = runVarianceAnalysis();
@@ -511,7 +522,6 @@ function systemLoop(timestamp) {
     targetCouplingSignal = fallbackProgressCoupling;
   }
 
-  // Defend against analytical edge cases
   if (isNaN(targetCouplingSignal) || targetCouplingSignal === null) {
     targetCouplingSignal = 0.1;
   }
@@ -520,12 +530,10 @@ function systemLoop(timestamp) {
   coupling = Math.max(0.01, Math.min(0.6, candidateSmoothed * 0.6));
   document.getElementById('cplRead').textContent = coupling.toFixed(3);
 
-  // 4. State Integration Engine Slices
   const subSteps = 4;
   const fixedSubDt = dt / subSteps;
 
   for (let step = 0; step < subSteps; step++) {
-    // If state is corrupted, intercept and reset mid-calculation
     if (isNaN(theta1) || isNaN(theta2) || isNaN(omega1) || isNaN(omega2)) {
       theta1 = 0.8; theta2 = -0.5;
       omega1 = 0; omega2 = 0;
@@ -541,7 +549,6 @@ function systemLoop(timestamp) {
     theta2 += omega2 * fixedSubDt;
   }
 
-  // 5. Explicit Post-Calculation Scrubbing Gate
   if (isNaN(theta1) || isNaN(theta2) || isNaN(omega1) || isNaN(omega2)) {
     theta1 = 0.8;
     theta2 = -0.5;
@@ -549,11 +556,10 @@ function systemLoop(timestamp) {
     omega2 = 0;
   }
 
-  // 6. Push Verified Metrics to DOM Graphic Element
   syncPhysicsGraph();
-  
   rafId = requestAnimationFrame(systemLoop);
 }
+
 function syncPhysicsGraph() {
   const p1 = { x: pivot1.x + length1 * Math.sin(theta1), y: pivot1.y + length1 * Math.cos(theta1) };
   const p2 = { x: pivot2.x + length2 * Math.sin(theta2), y: pivot2.y + length2 * Math.cos(theta2) };
@@ -588,7 +594,7 @@ function syncPhysicsGraph() {
   document.getElementById('lbl2').textContent = nounLexicon[layerIndex];
 }
 
-// --- Script Scaffolding Sequencer (With Time Anchors) ---
+// --- Script Scaffolding Sequencer ---
 function executeScriptSequence() {
   stopScaffoldingTimers();
   let cumulativeTimeline = 0;
@@ -610,6 +616,13 @@ function executeScriptSequence() {
       currentActiveLineIndex = index;
       currentLineDuration = line.duration;
       lineStartTimestamp = performance.now();
+
+      // Trigger the asynchronous buffer time-stretch if using a file track
+      if (activeMode === 'url' && audioBuffer) {
+        activeSources.forEach(s => { try { s.stop(); } catch(e){} });
+        activeSources = [];
+        playStretchedSentence(line.duration);
+      }
 
       if (activeMode === 'none') {
         fallbackProgressCoupling = 0.1 + (0.9 * (index / (staircaseLines.length - 1)));
@@ -638,6 +651,8 @@ function stopScaffoldingTimers() {
   sequenceTimerIds.forEach(id => clearTimeout(id));
   sequenceTimerIds = [];
   currentActiveLineIndex = -1;
+  activeSources.forEach(s => { try { s.stop(); } catch(e){} });
+  activeSources = [];
 }
 
 document.getElementById('sentence').addEventListener('input', rebuildStaircase);
