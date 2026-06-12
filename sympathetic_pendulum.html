@@ -251,11 +251,11 @@ let recentRms = [];
 let candidateSmoothed = 0.1;
 const CANDIDATE_ALPHA = 0.04; 
 
-// Physics State Engine
-const g = 0.0025;
+// Physics State Engine (FIXED SCALING BASE)
+const g = 0.00005; // Adjusted down to scale with raw lengths
 let damping = 0.0015;
 let coupling = 0.1;
-let theta1 = 0.8;  // Initial asymmetric offset
+let theta1 = 0.8;  
 let theta2 = -0.5;
 let omega1 = 0;
 let omega2 = 0;
@@ -272,6 +272,9 @@ let rafId = null;
 let staircaseLines = [];
 let sequenceTimerIds = [];
 let fallbackProgressCoupling = 0.1;
+let lineStartTimestamp = 0;
+let currentLineDuration = 0;
+let currentActiveLineIndex = -1;
 
 const verbLexicon = ["Searching", "Examining", "Stretching"];
 const nounLexicon = ["Canvas", "Space", "Air"];
@@ -320,6 +323,10 @@ function rebuildStaircase() {
     row.id = `sc-line-${i}`;
     row.style.letterSpacing = `${spacing}px`;
     row.style.opacity = Math.max(0.4, 1 - (i * 0.12));
+    
+    // Inline style setup to handle the background progress bar transition cleanly
+    row.style.background = 'linear-gradient(to right, var(--accent-bg) 0%, var(--bg) 0%)';
+    
     row.innerHTML = `<span class="index">${i+1}</span>${escapeHTML(text)}<span class="duration">${duration}s</span><div class="breath-cue"></div>`;
     container.appendChild(row);
   }
@@ -455,10 +462,8 @@ function runVarianceAnalysis() {
 
   const floorThreshold = parseFloat(document.getElementById('rmsFloor').value);
 
-  // GAP MATCH CRITICAL FIX: Silence Detection Layer
   if (currentRms < floorThreshold) {
     document.getElementById('stateRead').textContent = "Silence (Frozen)";
-    // Lock coupling to its current smoothed trajectory instead of jumping to 1.0
     return coupling / 0.6; 
   }
 
@@ -469,9 +474,8 @@ function runVarianceAnalysis() {
   const mean = recentRms.reduce((a, b) => a + b, 0) / recentRms.length;
   const variance = recentRms.reduce((a, b) => a + (b - mean) * (b - mean), 0) / recentRms.length;
 
-  // Derive variance normalization against nominal upper target limit
   const normalVariance = Math.min(1, variance / 0.0015); 
-  return 1 - normalVariance; // Target ideal inverse alignment map 
+  return 1 - normalVariance; 
 }
 
 function systemLoop(timestamp) {
@@ -479,9 +483,18 @@ function systemLoop(timestamp) {
   if (lastFrameTime === null) lastFrameTime = timestamp;
   let dt = timestamp - lastFrameTime;
   lastFrameTime = timestamp;
-  dt = Math.min(dt, 40); // Cap frame step sizes
+  dt = Math.min(dt, 40); 
 
-  // Determine Signal Driver (Audio Track vs Fallback Matrix)
+  // VISUAL SYNC DRIVER: Live UI Progress Fill Update
+  if (currentActiveLineIndex !== -1) {
+    const elapsedLineTime = timestamp - lineStartTimestamp;
+    const progressPercent = Math.min(100, (elapsedLineTime / (currentLineDuration * 1000)) * 100);
+    const activeEl = document.getElementById(`sc-line-${currentActiveLineIndex}`);
+    if (activeEl) {
+      activeEl.style.background = `linear-gradient(to right, var(--accent-bg) ${progressPercent}%, var(--bg) ${progressPercent}%)`;
+    }
+  }
+
   let targetCouplingSignal = 0;
   if (activeMode !== 'none' && analyser) {
     targetCouplingSignal = runVarianceAnalysis();
@@ -491,20 +504,26 @@ function systemLoop(timestamp) {
     targetCouplingSignal = fallbackProgressCoupling;
   }
 
-  // Smooth the calculated target coupling trajectory
   candidateSmoothed = candidateSmoothed + (targetCouplingSignal - candidateSmoothed) * CANDIDATE_ALPHA;
   coupling = Math.max(0.01, Math.min(0.6, candidateSmoothed * 0.6));
   document.getElementById('cplRead').textContent = coupling.toFixed(3);
 
-  // Compute Physics Matrix
+  // FIXED SI DIVISOR REMOVED
   const subSteps = 4;
   const sDt = dt / subSteps;
   for (let step = 0; step < subSteps; step++) {
-    const a1 = -g * Math.sin(theta1) / (length1/1000) - damping * omega1 + coupling * (theta2 - theta1);
-    const a2 = -g * Math.sin(theta2) / (length2/1000) - damping * omega2 + coupling * (theta1 - theta2);
+    const a1 = -g * Math.sin(theta1) / length1 - damping * omega1 + coupling * (theta2 - theta1);
+    const a2 = -g * Math.sin(theta2) / length2 - damping * omega2 + coupling * (theta1 - theta2);
     
     omega1 += a1 * sDt; omega2 += a2 * sDt;
     theta1 += omega1 * sDt; theta2 += omega2 * sDt;
+  }
+
+  // CRITICAL PROTECTION GATE: Hard reset if system collapses into NaN
+  if (isNaN(theta1) || isNaN(theta2)) {
+    theta1 = 0.8; theta2 = -0.5;
+    omega1 = 0; omega2 = 0;
+    candidateSmoothed = 0.1;
   }
 
   syncPhysicsGraph();
@@ -535,31 +554,41 @@ function syncPhysicsGraph() {
   document.getElementById('lbl2').setAttribute('x', p2.x);
   document.getElementById('lbl2').setAttribute('y', p2.y);
 
-  // Compute Delta Phase
   let delta = Math.abs(theta1 - theta2) % (Math.PI * 2);
   if (delta > Math.PI) delta = Math.PI * 2 - delta;
   const degGap = delta * (180 / Math.PI);
   document.getElementById('phaseRead').innerHTML = degGap.toFixed(1) + "&deg;";
 
-  // Dynamically map labels to showcase progress visually
   const layerIndex = Math.min(2, Math.floor((1 - Math.min(degGap, 60) / 60) * 3));
   document.getElementById('lbl1').textContent = verbLexicon[layerIndex];
   document.getElementById('lbl2').textContent = nounLexicon[layerIndex];
 }
 
-// --- Script Scaffolding Sequencer (Fallback Engine) ---
+// --- Script Scaffolding Sequencer (With Time Anchors) ---
 function executeScriptSequence() {
   stopScaffoldingTimers();
   let cumulativeTimeline = 0;
 
+  // Reset all line backgrounds before beginning sequence loop
+  document.querySelectorAll('.line').forEach(el => {
+    el.style.background = 'linear-gradient(to right, var(--accent-bg) 0%, var(--bg) 0%)';
+  });
+
   staircaseLines.forEach((line, index) => {
-    // Event: Line Entry Highlight Block
     const enterDelay = cumulativeTimeline * 1000;
     sequenceTimerIds.push(setTimeout(() => {
       document.querySelectorAll('.line').forEach((el, i) => {
         el.classList.toggle('active', i === index);
+        if (i !== index) {
+          el.style.background = 'linear-gradient(to right, var(--accent-bg) 0%, var(--bg) 0%)';
+        }
       });
-      // In Fallback Mode, coupling matches structural depth
+
+      // Pass baseline constraints down to animation loop values
+      currentActiveLineIndex = index;
+      currentLineDuration = line.duration;
+      lineStartTimestamp = performance.now();
+
       if (activeMode === 'none') {
         fallbackProgressCoupling = 0.1 + (0.9 * (index / (staircaseLines.length - 1)));
       }
@@ -568,14 +597,16 @@ function executeScriptSequence() {
     cumulativeTimeline += line.duration;
   });
 
-  // Cycle Loop Anchor
   const finalSequenceDuration = cumulativeTimeline * 1000;
   sequenceTimerIds.push(setTimeout(() => {
-    document.querySelectorAll('.line').forEach(el => el.classList.remove('active'));
-    if (activeMode === 'none') fallbackProgressCoupling = 0.1; // Reset baseline
+    document.querySelectorAll('.line').forEach(el => {
+      el.classList.remove('active');
+      el.style.background = 'linear-gradient(to right, var(--accent-bg) 0%, var(--bg) 0%)';
+    });
+    currentActiveLineIndex = -1;
+    if (activeMode === 'none') fallbackProgressCoupling = 0.1; 
   }, finalSequenceDuration));
 
-  // Loop Cycle Execution Interval Hook
   sequenceTimerIds.push(setTimeout(() => {
     if (running) executeScriptSequence();
   }, finalSequenceDuration + 2000));
@@ -584,14 +615,12 @@ function executeScriptSequence() {
 function stopScaffoldingTimers() {
   sequenceTimerIds.forEach(id => clearTimeout(id));
   sequenceTimerIds = [];
+  currentActiveLineIndex = -1;
 }
 
-// Initial Core Run Bootstrap
 document.getElementById('sentence').addEventListener('input', rebuildStaircase);
 window.addEventListener('DOMContentLoaded', () => {
   rebuildStaircase();
   updateFloorDisplay();
 });
 </script>
-</body>
-</html>
