@@ -252,7 +252,7 @@ let candidateSmoothed = 0.1;
 const CANDIDATE_ALPHA = 0.04; 
 
 // Physics State Engine (FIXED SCALING BASE)
-const g = 0.00005; // Adjusted down to scale with raw lengths
+const g = 0.00005; 
 let damping = 0.0015;
 let coupling = 0.1;
 let theta1 = 0.8;  
@@ -323,8 +323,6 @@ function rebuildStaircase() {
     row.id = `sc-line-${i}`;
     row.style.letterSpacing = `${spacing}px`;
     row.style.opacity = Math.max(0.4, 1 - (i * 0.12));
-    
-    // Inline style setup to handle the background progress bar transition cleanly
     row.style.background = 'linear-gradient(to right, var(--accent-bg) 0%, var(--bg) 0%)';
     
     row.innerHTML = `<span class="index">${i+1}</span>${escapeHTML(text)}<span class="duration">${duration}s</span><div class="breath-cue"></div>`;
@@ -481,17 +479,13 @@ function runVarianceAnalysis() {
 function systemLoop(timestamp) {
   if (!running) return;
   
-  // 1. Initialize or compute the time delta
   if (lastFrameTime === null) lastFrameTime = timestamp;
   let dt = timestamp - lastFrameTime;
   lastFrameTime = timestamp;
 
-  // Protect against tab switching or massive background pauses
   if (dt > 100) dt = 16.66; 
-  // Protect against 0ms browser calculation ticks
   if (dt <= 0) dt = 1; 
 
-  // 2. LIVE PACER GRADIENT UPDATE
   if (currentActiveLineIndex !== -1) {
     const elapsedLineTime = timestamp - lineStartTimestamp;
     const progressPercent = Math.min(100, (elapsedLineTime / (currentLineDuration * 1000)) * 100);
@@ -501,7 +495,6 @@ function systemLoop(timestamp) {
     }
   }
 
-  // 3. AUDIO DISPATCH & SMOOTHING
   let targetCouplingSignal = 0;
   if (activeMode !== 'none' && analyser) {
     targetCouplingSignal = runVarianceAnalysis();
@@ -515,12 +508,10 @@ function systemLoop(timestamp) {
   coupling = Math.max(0.01, Math.min(0.6, candidateSmoothed * 0.6));
   document.getElementById('cplRead').textContent = coupling.toFixed(3);
 
-  // 4. PHYSICS SUB-STEPS (Using fixed internal integration slices)
   const subSteps = 4;
   const fixedSubDt = dt / subSteps;
 
   for (let step = 0; step < subSteps; step++) {
-    // Explicit safety check inside the loop to catch runaway accelerations
     if (isNaN(theta1) || isNaN(theta2) || isNaN(omega1) || isNaN(omega2)) {
       theta1 = 0.8; theta2 = -0.5;
       omega1 = 0; omega2 = 0;
@@ -536,58 +527,9 @@ function systemLoop(timestamp) {
     theta2 += omega2 * fixedSubDt;
   }
 
-  // Final catch-all to guarantee string attributes inside the SVG elements never read "NaN"
   if (isNaN(theta1) || isNaN(theta2)) {
     theta1 = 0.8;
     theta2 = -0.5;
-  }
-
-  // 5. RENDERING PIPELINE DISPATCH
-  syncPhysicsGraph();
-  
-  // Clean request loop callback
-  rafId = requestAnimationFrame(systemLoop);
-}
-
-  // VISUAL SYNC DRIVER: Live UI Progress Fill Update
-  if (currentActiveLineIndex !== -1) {
-    const elapsedLineTime = timestamp - lineStartTimestamp;
-    const progressPercent = Math.min(100, (elapsedLineTime / (currentLineDuration * 1000)) * 100);
-    const activeEl = document.getElementById(`sc-line-${currentActiveLineIndex}`);
-    if (activeEl) {
-      activeEl.style.background = `linear-gradient(to right, var(--accent-bg) ${progressPercent}%, var(--bg) ${progressPercent}%)`;
-    }
-  }
-
-  let targetCouplingSignal = 0;
-  if (activeMode !== 'none' && analyser) {
-    targetCouplingSignal = runVarianceAnalysis();
-  } else {
-    document.getElementById('stateRead').textContent = "Fallback Step Engine";
-    document.getElementById('rmsRead').textContent = "0.0000";
-    targetCouplingSignal = fallbackProgressCoupling;
-  }
-
-  candidateSmoothed = candidateSmoothed + (targetCouplingSignal - candidateSmoothed) * CANDIDATE_ALPHA;
-  coupling = Math.max(0.01, Math.min(0.6, candidateSmoothed * 0.6));
-  document.getElementById('cplRead').textContent = coupling.toFixed(3);
-
-  // FIXED SI DIVISOR REMOVED
-  const subSteps = 4;
-  const sDt = dt / subSteps;
-  for (let step = 0; step < subSteps; step++) {
-    const a1 = -g * Math.sin(theta1) / length1 - damping * omega1 + coupling * (theta2 - theta1);
-    const a2 = -g * Math.sin(theta2) / length2 - damping * omega2 + coupling * (theta1 - theta2);
-    
-    omega1 += a1 * sDt; omega2 += a2 * sDt;
-    theta1 += omega1 * sDt; theta2 += omega2 * sDt;
-  }
-
-  // CRITICAL PROTECTION GATE: Hard reset if system collapses into NaN
-  if (isNaN(theta1) || isNaN(theta2)) {
-    theta1 = 0.8; theta2 = -0.5;
-    omega1 = 0; omega2 = 0;
-    candidateSmoothed = 0.1;
   }
 
   syncPhysicsGraph();
@@ -633,7 +575,6 @@ function executeScriptSequence() {
   stopScaffoldingTimers();
   let cumulativeTimeline = 0;
 
-  // Reset all line backgrounds before beginning sequence loop
   document.querySelectorAll('.line').forEach(el => {
     el.style.background = 'linear-gradient(to right, var(--accent-bg) 0%, var(--bg) 0%)';
   });
@@ -648,7 +589,6 @@ function executeScriptSequence() {
         }
       });
 
-      // Pass baseline constraints down to animation loop values
       currentActiveLineIndex = index;
       currentLineDuration = line.duration;
       lineStartTimestamp = performance.now();
@@ -688,3 +628,5 @@ window.addEventListener('DOMContentLoaded', () => {
   updateFloorDisplay();
 });
 </script>
+</body>
+</html>
