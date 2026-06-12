@@ -479,13 +479,19 @@ function runVarianceAnalysis() {
 function systemLoop(timestamp) {
   if (!running) return;
   
-  if (lastFrameTime === null) lastFrameTime = timestamp;
+  // 1. Safe Time Delta Integration
+  if (lastFrameTime === null) {
+    lastFrameTime = timestamp;
+  }
   let dt = timestamp - lastFrameTime;
   lastFrameTime = timestamp;
 
-  if (dt > 100) dt = 16.66; 
-  if (dt <= 0) dt = 1; 
+  // If tab was inactive, or if it's the first tick, force a stable 60Hz frame step
+  if (dt > 100 || dt <= 0) {
+    dt = 16.66; 
+  }
 
+  // 2. Live Progress Bar UI Rendering Tracker
   if (currentActiveLineIndex !== -1) {
     const elapsedLineTime = timestamp - lineStartTimestamp;
     const progressPercent = Math.min(100, (elapsedLineTime / (currentLineDuration * 1000)) * 100);
@@ -495,6 +501,7 @@ function systemLoop(timestamp) {
     }
   }
 
+  // 3. Signal Capture & Filter Evaluation
   let targetCouplingSignal = 0;
   if (activeMode !== 'none' && analyser) {
     targetCouplingSignal = runVarianceAnalysis();
@@ -504,14 +511,21 @@ function systemLoop(timestamp) {
     targetCouplingSignal = fallbackProgressCoupling;
   }
 
+  // Defend against analytical edge cases
+  if (isNaN(targetCouplingSignal) || targetCouplingSignal === null) {
+    targetCouplingSignal = 0.1;
+  }
+
   candidateSmoothed = candidateSmoothed + (targetCouplingSignal - candidateSmoothed) * CANDIDATE_ALPHA;
   coupling = Math.max(0.01, Math.min(0.6, candidateSmoothed * 0.6));
   document.getElementById('cplRead').textContent = coupling.toFixed(3);
 
+  // 4. State Integration Engine Slices
   const subSteps = 4;
   const fixedSubDt = dt / subSteps;
 
   for (let step = 0; step < subSteps; step++) {
+    // If state is corrupted, intercept and reset mid-calculation
     if (isNaN(theta1) || isNaN(theta2) || isNaN(omega1) || isNaN(omega2)) {
       theta1 = 0.8; theta2 = -0.5;
       omega1 = 0; omega2 = 0;
@@ -527,15 +541,19 @@ function systemLoop(timestamp) {
     theta2 += omega2 * fixedSubDt;
   }
 
-  if (isNaN(theta1) || isNaN(theta2)) {
+  // 5. Explicit Post-Calculation Scrubbing Gate
+  if (isNaN(theta1) || isNaN(theta2) || isNaN(omega1) || isNaN(omega2)) {
     theta1 = 0.8;
     theta2 = -0.5;
+    omega1 = 0;
+    omega2 = 0;
   }
 
+  // 6. Push Verified Metrics to DOM Graphic Element
   syncPhysicsGraph();
+  
   rafId = requestAnimationFrame(systemLoop);
 }
-
 function syncPhysicsGraph() {
   const p1 = { x: pivot1.x + length1 * Math.sin(theta1), y: pivot1.y + length1 * Math.cos(theta1) };
   const p2 = { x: pivot2.x + length2 * Math.sin(theta2), y: pivot2.y + length2 * Math.cos(theta2) };
