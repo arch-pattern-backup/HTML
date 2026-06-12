@@ -480,10 +480,74 @@ function runVarianceAnalysis() {
 
 function systemLoop(timestamp) {
   if (!running) return;
+  
+  // 1. Initialize or compute the time delta
   if (lastFrameTime === null) lastFrameTime = timestamp;
   let dt = timestamp - lastFrameTime;
   lastFrameTime = timestamp;
-  dt = Math.min(dt, 40); 
+
+  // Protect against tab switching or massive background pauses
+  if (dt > 100) dt = 16.66; 
+  // Protect against 0ms browser calculation ticks
+  if (dt <= 0) dt = 1; 
+
+  // 2. LIVE PACER GRADIENT UPDATE
+  if (currentActiveLineIndex !== -1) {
+    const elapsedLineTime = timestamp - lineStartTimestamp;
+    const progressPercent = Math.min(100, (elapsedLineTime / (currentLineDuration * 1000)) * 100);
+    const activeEl = document.getElementById(`sc-line-${currentActiveLineIndex}`);
+    if (activeEl) {
+      activeEl.style.background = `linear-gradient(to right, var(--accent-bg) ${progressPercent}%, var(--bg) ${progressPercent}%)`;
+    }
+  }
+
+  // 3. AUDIO DISPATCH & SMOOTHING
+  let targetCouplingSignal = 0;
+  if (activeMode !== 'none' && analyser) {
+    targetCouplingSignal = runVarianceAnalysis();
+  } else {
+    document.getElementById('stateRead').textContent = "Fallback Step Engine";
+    document.getElementById('rmsRead').textContent = "0.0000";
+    targetCouplingSignal = fallbackProgressCoupling;
+  }
+
+  candidateSmoothed = candidateSmoothed + (targetCouplingSignal - candidateSmoothed) * CANDIDATE_ALPHA;
+  coupling = Math.max(0.01, Math.min(0.6, candidateSmoothed * 0.6));
+  document.getElementById('cplRead').textContent = coupling.toFixed(3);
+
+  // 4. PHYSICS SUB-STEPS (Using fixed internal integration slices)
+  const subSteps = 4;
+  const fixedSubDt = dt / subSteps;
+
+  for (let step = 0; step < subSteps; step++) {
+    // Explicit safety check inside the loop to catch runaway accelerations
+    if (isNaN(theta1) || isNaN(theta2) || isNaN(omega1) || isNaN(omega2)) {
+      theta1 = 0.8; theta2 = -0.5;
+      omega1 = 0; omega2 = 0;
+      break;
+    }
+
+    const a1 = -g * Math.sin(theta1) / length1 - damping * omega1 + coupling * (theta2 - theta1);
+    const a2 = -g * Math.sin(theta2) / length2 - damping * omega2 + coupling * (theta1 - theta2);
+    
+    omega1 += a1 * fixedSubDt; 
+    omega2 += a2 * fixedSubDt;
+    theta1 += omega1 * fixedSubDt; 
+    theta2 += omega2 * fixedSubDt;
+  }
+
+  // Final catch-all to guarantee string attributes inside the SVG elements never read "NaN"
+  if (isNaN(theta1) || isNaN(theta2)) {
+    theta1 = 0.8;
+    theta2 = -0.5;
+  }
+
+  // 5. RENDERING PIPELINE DISPATCH
+  syncPhysicsGraph();
+  
+  // Clean request loop callback
+  rafId = requestAnimationFrame(systemLoop);
+}
 
   // VISUAL SYNC DRIVER: Live UI Progress Fill Update
   if (currentActiveLineIndex !== -1) {
