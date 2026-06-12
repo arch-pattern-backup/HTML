@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Audio pacing diagnostic</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg-secondary: #f5f4f0;
+    --bg-tertiary: #ebe9e3;
+    --text-primary: #1a1a18;
+    --text-secondary: #6b6a64;
+    --text-tertiary: #9a9890;
+    --border: rgba(0,0,0,0.12);
+    --border-strong: rgba(0,0,0,0.22);
+    --accent: #185fa5;
+    --accent-bg: #e6f1fb;
+    --c1: #185fa5;
+    --c2: #993c1d;
+    --c3: #639922;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --font-mono: "SF Mono", Monaco, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a;
+      --bg-secondary: #262624;
+      --bg-tertiary: #2e2e2b;
+      --text-primary: #ece9e3;
+      --text-secondary: #b4b2a9;
+      --text-tertiary: #888780;
+      --border: rgba(255,255,255,0.12);
+      --border-strong: rgba(255,255,255,0.22);
+      --accent: #85b7eb;
+      --accent-bg: #0c447c;
+      --c1: #85b7eb;
+      --c2: #f0997b;
+      --c3: #97c459;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 2rem 1rem;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    display: flex;
+    justify-content: center;
+  }
+  .wrap {
+    max-width: 760px;
+    width: 100%;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 500;
+    margin: 0 0 0.25rem;
+  }
+  .subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0 0 1.5rem;
+  }
+  .panel {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+  input[type="text"] {
+    width: 100%;
+    font-size: 15px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    background: var(--bg);
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    font-family: var(--font-sans);
+  }
+  input[type="text"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--accent-bg);
+    border-color: var(--accent);
+  }
+  input[type="file"] {
+    width: 100%;
+    font-size: 13px;
+    margin-bottom: 1rem;
+  }
+  .row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  button {
+    background: var(--bg);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-md);
+    padding: 8px 16px;
+    font-size: 14px;
+    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-sans);
+  }
+  button:hover { background: var(--bg-secondary); }
+  button:active { transform: scale(0.98); }
+  button.primary {
+    background: var(--accent-bg);
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 500;
+  }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .status {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-top: 0.5rem;
+  }
+  .status.error { color: #c0392b; }
+  @media (prefers-color-scheme: dark) {
+    .status.error { color: #f0a0a0; }
+  }
+  .chart-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+  .chart-title {
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+  .chart-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+  }
+  canvas {
+    width: 100%;
+    display: block;
+  }
+  .legend {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 8px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+  .note {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-top: 1rem;
+  }
+  .readout {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-secondary);
+    display: flex;
+    gap: 24px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .readout strong {
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Audio pacing diagnostic</h1>
+  <p class="subtitle">Load a spoken-sentence clip and watch how volume, smoothed loudness, and moment-to-moment variance behave over time &mdash; before deciding what should drive the pendulum.</p>
+
+  <div class="panel">
+    <label for="audioUrl">Audio URL</label>
+    <input type="text" id="audioUrl" placeholder="https://audio.patternfoundry.systems/hot/example.mp3">
+
+    <label for="audioFile">Or choose a local file</label>
+    <input type="file" id="audioFile" accept="audio/*">
+
+    <div class="row">
+      <button class="primary" id="loadBtn" onclick="loadFromUrl()">
+        <span>&#9658;</span>
+        <span>Load and analyze</span>
+      </button>
+      <button id="playBtn" onclick="togglePlay()" disabled>
+        <span id="playIcon">&#9658;</span>
+        <span id="playLabel">Play</span>
+      </button>
+    </div>
+    <div class="status" id="status">No audio loaded.</div>
+    <div class="readout" id="readout"></div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">RMS amplitude (raw loudness)</div>
+    <div class="chart-sub">Instantaneous volume, sampled continuously. Expect this to be spiky.</div>
+    <canvas id="chartRms" height="120"></canvas>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">Smoothed loudness</div>
+    <div class="chart-sub">RMS with a slow exponential moving average &mdash; the "drift" version.</div>
+    <canvas id="chartSmoothed" height="120"></canvas>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">Rolling variance</div>
+    <div class="chart-sub">How much loudness is fluctuating in a recent window. Lower = more settled / regular.</div>
+    <canvas id="chartVariance" height="120"></canvas>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">Candidate coupling signal</div>
+    <div class="chart-sub">1 minus normalized variance, itself slowly smoothed &mdash; a possible mapping toward "sympathetic accord" as variance drops.</div>
+    <canvas id="chartCandidate" height="120"></canvas>
+  </div>
+
+  <p class="note">This page only visualizes signals &mdash; it does not drive the pendulum. Once a candidate signal looks like it tracks "settling" on real recordings, that formula can be carried over to the pendulum page's coupling parameter.</p>
+
+</div>
+
+<script>
+let audioCtx = null;
+let analyser = null;
+let sourceNode = null;
+let audioElement = null;
+let playing = false;
+
+const HISTORY_LEN = 600;
+let rmsHistory = [];
+let smoothedHistory = [];
+let varianceHistory = [];
+let candidateHistory = [];
+
+let smoothedValue = 0;
+const SMOOTH_ALPHA = 0.02;
+
+const VAR_WINDOW = 30;
+let recentRms = [];
+
+let candidateSmoothed = 0;
+const CANDIDATE_ALPHA = 0.03;
+
+function setStatus(msg, isError) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.classList.toggle('error', !!isError);
+}
+
+async function loadFromUrl() {
+  const url = document.getElementById('audioUrl').value.trim();
+  if (!url) {
+    setStatus('Enter an audio URL or choose a local file.', true);
+    return;
+  }
+  setStatus('Loading...', false);
+  try {
+    await setupAudio(url);
+    setStatus('Loaded. Press play to analyze.', false);
+  } catch (err) {
+    setStatus('Could not load audio: ' + err.message, true);
+  }
+}
+
+document.getElementById('audioFile').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  setStatus('Loading local file...', false);
+  try {
+    const url = URL.createObjectURL(file);
+    await setupAudio(url);
+    setStatus('Loaded local file. Press play to analyze.', false);
+  } catch (err) {
+    setStatus('Could not load file: ' + err.message, true);
+  }
+});
+
+async function setupAudio(url) {
+  if (audioElement) {
+    audioElement.pause();
+    audioElement.src = '';
+  }
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+
+  audioElement = new Audio();
+  audioElement.crossOrigin = 'anonymous';
+  audioElement.src = url;
+  audioElement.loop = true;
+
+  await new Promise((resolve, reject) => {
+    audioElement.addEventListener('canplaythrough', resolve, { once: true });
+    audioElement.addEventListener('error', () => reject(new Error('Audio failed to load (check CORS / URL)')), { once: true });
+    audioElement.load();
+  });
+
+  if (sourceNode) {
+    sourceNode.disconnect();
+  }
+  sourceNode = audioCtx.createMediaElementSource(audioElement);
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 1024;
+  analyser.smoothingTimeConstant = 0;
+  sourceNode.connect(analyser);
+  analyser.connect(audioCtx.destination);
+
+  resetHistories();
+  document.getElementById('playBtn').disabled = false;
+}
+
+function resetHistories() {
+  rmsHistory = [];
+  smoothedHistory = [];
+  varianceHistory = [];
+  candidateHistory = [];
+  smoothedValue = 0;
+  recentRms = [];
+  candidateSmoothed = 0;
+}
+
+function togglePlay() {
+  if (!audioElement) return;
+  playing = !playing;
+  const icon = document.getElementById('playIcon');
+  const label = document.getElementById('playLabel');
+  if (playing) {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    audioElement.play();
+    icon.textContent = '\u275A\u275A';
+    label.textContent = 'Pause';
+    tick();
+  } else {
+    audioElement.pause();
+    icon.textContent = '\u25B6';
+    label.textContent = 'Play';
+  }
+}
+
+const timeData = new Uint8Array(1024);
+
+function computeRms() {
+  analyser.getByteTimeDomainData(timeData);
+  let sumSquares = 0;
+  for (let i = 0; i < timeData.length; i++) {
+    const norm = (timeData[i] - 128) / 128;
+    sumSquares += norm * norm;
+  }
+  return Math.sqrt(sumSquares / timeData.length);
+}
+
+function pushHistory(arr, value) {
+  arr.push(value);
+  if (arr.length > HISTORY_LEN) arr.shift();
+}
+
+function tick() {
+  if (!playing) return;
+
+  const rms = computeRms();
+  pushHistory(rmsHistory, rms);
+
+  smoothedValue = smoothedValue + (rms - smoothedValue) * SMOOTH_ALPHA;
+  pushHistory(smoothedHistory, smoothedValue);
+
+  recentRms.push(rms);
+  if (recentRms.length > VAR_WINDOW) recentRms.shift();
+  const mean = recentRms.reduce((a, b) => a + b, 0) / recentRms.length;
+  const variance = recentRms.reduce((a, b) => a + (b - mean) * (b - mean), 0) / recentRms.length;
+  pushHistory(varianceHistory, variance);
+
+  const normVariance = Math.min(1, variance / 0.02);
+  const instantCandidate = 1 - normVariance;
+  candidateSmoothed = candidateSmoothed + (instantCandidate - candidateSmoothed) * CANDIDATE_ALPHA;
+  pushHistory(candidateHistory, candidateSmoothed);
+
+  drawChart('chartRms', rmsHistory, '--c1', 0, 0.5);
+  drawChart('chartSmoothed', smoothedHistory, '--c1', 0, 0.3);
+  drawChart('chartVariance', varianceHistory, '--c2', 0, 0.02);
+  drawChart('chartCandidate', candidateHistory, '--c3', 0, 1);
+
+  updateReadout(rms, smoothedValue, variance, candidateSmoothed);
+
+  requestAnimationFrame(tick);
+}
+
+function updateReadout(rms, smoothed, variance, candidate) {
+  const el = document.getElementById('readout');
+  el.innerHTML =
+    'RMS: <strong>' + rms.toFixed(3) + '</strong>' +
+    ' &nbsp; Smoothed: <strong>' + smoothed.toFixed(3) + '</strong>' +
+    ' &nbsp; Variance: <strong>' + variance.toFixed(4) + '</strong>' +
+    ' &nbsp; Candidate signal: <strong>' + candidate.toFixed(3) + '</strong>';
+}
+
+function drawChart(canvasId, data, colorVar, min, max) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  if (canvas.width !== w * dpr || canvas.height !== h * dpr) {
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  const color = getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim();
+
+  ctx.strokeStyle = 'rgba(128,128,128,0.15)';
+  ctx.lineWidth = 1;
+  for (let i = 1; i < 4; i++) {
+    const y = h * i / 4;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+  }
+
+  if (data.length < 2) return;
+
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let i = 0; i < data.length; i++) {
+    const x = (i / (HISTORY_LEN - 1)) * w;
+    const norm = Math.max(0, Math.min(1, (data[i] - min) / (max - min)));
+    const y = h - norm * h;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+}
+</script>
+</body>
+</html>
