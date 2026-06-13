@@ -223,7 +223,7 @@
       <div class="readout-bar">
         <span>Engine: <span id="engineMode" class="mode-indicator mode-fallback">Off</span></span>
         <span>RMS Loudness: <strong id="rmsRead">0.000</strong></span>
-        <span>Signal Coupling: <strong id="cplRead">0.10</strong></span>
+        <span>Signal Coupling: <strong id="cplRead">0.0050</strong></span>
         <span>Phase Gap: <strong id="phaseRead">0.0&deg;</strong></span>
         <span>State: <strong id="stateRead">Idle</strong></span>
       </div>
@@ -252,20 +252,20 @@ let activeSources = [];
 const HISTORY_LIMIT = 600;
 const VAR_WINDOW = 35;
 let recentRms = [];
-let candidateSmoothed = 0.1;
+let candidateSmoothed = 0.4;
 const CANDIDATE_ALPHA = 0.04; 
 
 // Physics State Engine (FIXED SCALING BASE)
 const g = 0.0022;
 let damping = 0.0025;
-let coupling = 0.1;
-let theta1 = 0.8;  
-let theta2 = -0.5;
+let coupling = 0.005;
+let theta1 = 0.6;  
+let theta2 = -0.4;
 let omega1 = 0;
 let omega2 = 0;
 
 const MAX_THETA = Math.PI * 0.95;   // keep pendulums from spinning over the top
-const MAX_OMEGA = 0.6;              // clamp angular velocity to a sane range
+const MAX_OMEGA = 0.08;             // clamp angular velocity to a sane range for g=0.0022
 
 const pivot1 = { x: 190, y: 40 };
 const pivot2 = { x: 370, y: 40 };
@@ -539,8 +539,10 @@ function systemLoop(timestamp) {
   }
 
   candidateSmoothed = candidateSmoothed + (targetCouplingSignal - candidateSmoothed) * CANDIDATE_ALPHA;
-  coupling = Math.max(0.01, Math.min(0.6, candidateSmoothed * 0.6));
-  document.getElementById('cplRead').textContent = coupling.toFixed(3);
+  // Coupling must stay small relative to gravity (g=0.0022) or it overwhelms
+  // the pendulums' own dynamics and just pins them at the angle limits.
+  coupling = Math.max(0.0002, Math.min(0.012, candidateSmoothed * 0.012));
+  document.getElementById('cplRead').textContent = coupling.toFixed(4);
 
   const subSteps = 4;
   const fixedSubDt = dt / subSteps;
@@ -549,7 +551,7 @@ function systemLoop(timestamp) {
 
   for (let step = 0; step < subSteps; step++) {
     if (isNaN(theta1) || isNaN(theta2) || isNaN(omega1) || isNaN(omega2)) {
-      theta1 = 0.8; theta2 = -0.5;
+      theta1 = 0.6; theta2 = -0.4;
       omega1 = 0; omega2 = 0;
       break;
     }
@@ -577,8 +579,8 @@ function systemLoop(timestamp) {
   }
 
   if (isNaN(theta1) || isNaN(theta2) || isNaN(omega1) || isNaN(omega2)) {
-    theta1 = 0.8;
-    theta2 = -0.5;
+    theta1 = 0.6;
+    theta2 = -0.4;
     omega1 = 0;
     omega2 = 0;
     logDebug('Physics reset: NaN detected after substeps');
