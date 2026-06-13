@@ -265,7 +265,7 @@ let omega1 = 0;
 let omega2 = 0;
 
 const MAX_THETA = Math.PI * 0.95;   // keep pendulums from spinning over the top
-const MAX_OMEGA = 0.05;             // clamp angular velocity to a sane range
+const MAX_OMEGA = 0.6;              // clamp angular velocity to a sane range
 
 const pivot1 = { x: 190, y: 40 };
 const pivot2 = { x: 370, y: 40 };
@@ -545,6 +545,8 @@ function systemLoop(timestamp) {
   const subSteps = 4;
   const fixedSubDt = dt / subSteps;
 
+  let lastAccel1 = 0, lastAccel2 = 0;
+
   for (let step = 0; step < subSteps; step++) {
     if (isNaN(theta1) || isNaN(theta2) || isNaN(omega1) || isNaN(omega2)) {
       theta1 = 0.8; theta2 = -0.5;
@@ -554,6 +556,8 @@ function systemLoop(timestamp) {
 
     const a1 = -g * Math.sin(theta1) / length1 - damping * omega1 + coupling * (theta2 - theta1);
     const a2 = -g * Math.sin(theta2) / length2 - damping * omega2 + coupling * (theta1 - theta2);
+    lastAccel1 = a1;
+    lastAccel2 = a2;
     
     omega1 += a1 * fixedSubDt; 
     omega2 += a2 * fixedSubDt;
@@ -582,7 +586,7 @@ function systemLoop(timestamp) {
 
   if (timestamp - lastLogTime > LOG_INTERVAL_MS) {
     lastLogTime = timestamp;
-    logDebug(`state=${document.getElementById('stateRead').textContent} coupling=${coupling.toFixed(3)} rms=${document.getElementById('rmsRead').textContent} theta1=${theta1.toFixed(2)} theta2=${theta2.toFixed(2)} omega1=${omega1.toFixed(4)} omega2=${omega2.toFixed(4)}`);
+    logDebug(`dt=${dt.toFixed(2)} coupling=${coupling.toFixed(3)} theta1=${theta1.toFixed(4)} theta2=${theta2.toFixed(4)} omega1=${omega1.toFixed(4)} omega2=${omega2.toFixed(4)} a1=${lastAccel1.toFixed(6)} a2=${lastAccel2.toFixed(6)}`);
   }
 
   syncPhysicsGraph();
