@@ -340,7 +340,7 @@ async function initializeAudioPipeline() {
   if (audioCtx && audioCtx.state === 'suspended') {
     await audioCtx.resume();
   }
-  if (analyser) return true; // Stream structures are already intact
+  if (analyser) return true; 
   
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   
@@ -378,7 +378,6 @@ async function loadAudioTrack() {
     const bufferData = await res.arrayBuffer();
     audioBuffer = await audioCtx.decodeAudioData(bufferData);
     
-    // Setup dedicated analyzer node specifically for monitoring memory buffer nodes
     analyser = audioCtx.createAnalyser();
     analyser.fftSize = 512;
     analyser.smoothingTimeConstant = 0.1;
@@ -393,24 +392,16 @@ async function loadAudioTrack() {
   }
 }
 
-function playStretchedSentence(targetDuration) {
+// ANCHOR MODIFICATION: Path 1 Native Speed Trigger Implementation
+function playNativeSentence() {
   if (!audioCtx || !audioBuffer || !analyser) return;
 
   const source = audioCtx.createBufferSource();
   source.buffer = audioBuffer;
 
-  const rawDuration = audioBuffer.duration;
-  const targetRate = rawDuration / targetDuration;
-  
-  source.playbackRate.value = Math.max(0.20, Math.min(4.0, targetRate));
+  // Enforce absolute un-stretched playback speed (1.0) to hold your natural voice print
+  source.playbackRate.value = 1.0;
 
-  if ('preservesPitch' in source) {
-    source.preservesPitch = true;
-  } else if ('mozPreservesPitch' in source) {
-    source.mozPreservesPitch = true;
-  }
-
-  // Connect buffer through the analyser node so the variance graphics sync live
   source.connect(analyser);
   analyser.connect(audioCtx.destination);
   
@@ -618,11 +609,11 @@ function executeScriptSequence() {
       currentLineDuration = line.duration;
       lineStartTimestamp = performance.now();
 
-      // Trigger the asynchronous buffer time-stretch if using a file track
+      // Native audio trigger invocation replacing old speed factors
       if (activeMode === 'url' && audioBuffer) {
         activeSources.forEach(s => { try { s.stop(); } catch(e){} });
         activeSources = [];
-        playStretchedSentence(line.duration);
+        playNativeSentence();
       }
 
       if (activeMode === 'none') {
